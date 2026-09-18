@@ -296,7 +296,7 @@ footer .brand .logo-img{height:34px}
 .story .pl i{width:34px;height:34px;border-radius:10px;background:#fff;border:1px solid var(--light-line);display:grid;place-items:center;flex:none;font-style:normal;color:var(--coral);font-weight:700;font-family:var(--display);font-size:13px}
 .story .pl b{display:block;font-family:var(--display);font-size:16px}
 .story .pl span{color:var(--light-muted);font-size:15px}
-.collage{position:relative;aspect-ratio:1/1;max-width:100%}
+.collage{position:relative;aspect-ratio:1/1;max-width:100%;margin-bottom:26px}
 .ph{position:absolute;border-radius:18px;box-shadow:0 30px 60px rgba(11,18,32,.18);border:6px solid #fff;overflow:hidden;background:#dfe6f1}
 .ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .ph span{position:absolute;left:12px;bottom:10px;font-family:var(--display);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:rgba(11,18,32,.7);padding:4px 9px;border-radius:999px}
@@ -304,6 +304,13 @@ footer .brand .logo-img{height:34px}
 .ph.b{width:54%;height:48%;right:0;top:30%;transform:rotate(2.5deg)}
 .ph.c{width:46%;height:38%;left:12%;bottom:0;transform:rotate(-1deg)}
 .story .stamp{position:absolute;right:6%;top:6%;background:var(--light-ink);color:#fff;font-family:var(--display);font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:8px 14px;border-radius:999px;z-index:2}
+.btn-tour{margin-top:28px;background:#fff;color:var(--light-ink);border-color:var(--light-line);box-shadow:0 10px 30px rgba(11,18,32,.08)}
+.btn-tour:hover{border-color:var(--light-ink)}
+.btn-tour+.powered{margin-top:22px}
+a.collage{display:block;text-decoration:none;color:inherit}
+.tourtag{position:absolute;left:50%;bottom:-26px;transform:translateX(-50%);background:var(--coral);color:#fff;font-family:var(--display);font-size:12px;letter-spacing:.08em;text-transform:uppercase;padding:10px 16px;border-radius:999px;box-shadow:0 12px 30px rgba(255,90,60,.35);white-space:nowrap;transition:transform .25s}
+a.collage:hover .tourtag{transform:translateX(-50%) translateY(-3px)}
+a.collage:hover .ph{filter:brightness(1.04)}
 .story .powered{margin-top:28px;display:flex;align-items:center;gap:18px;color:var(--light-muted);font-size:14px;flex-wrap:wrap}
 .story .powered b{font-family:var(--display);color:var(--light-ink);font-size:22px;letter-spacing:-.05em}
 @media (max-width:900px){.story .wrap{grid-template-columns:1fr}.collage{max-width:460px}}
@@ -632,14 +639,16 @@ footer .legal{border-top-color:var(--light-line);color:#8A94A8}
         <li><i>02</i><div><b data-i18n="story.k2t">A community in two languages</b><span data-i18n="story.k2p">Every session and channel available in English and Spanish, written by Spanish speakers.</span></div></li>
         <li><i>03</i><div><b data-i18n="story.k3t">Mentorship built in</b><span data-i18n="story.k3p">New agents paired with a Certified Mentor from their first week.</span></div></li>
       </ul>
+      <a class="btn btn-tour" href="https://view.spiro.media/8923_stone_green_way-1642?branding=false" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3z"/><path d="M9 4v13M15 7v13"/></svg><span data-i18n="story.tour">Take the virtual tour of the space</span> →</a>
       <div class="powered"><img src="img/exp-realty-dark.png" alt="eXp Realty" style="height:30px;width:auto"><span data-i18n="story.powered">Proudly powered by the eXp Realty cloud brokerage model.</span></div>
     </div>
-    <div class="collage" aria-hidden="true">
+    <a class="collage" href="https://view.spiro.media/8923_stone_green_way-1642?branding=false" target="_blank" rel="noopener" aria-label="Virtual tour of the office">
       <span class="stamp" data-i18n="story.stamp">Real agents, real moments</span>
       <div class="ph a"><img src="img/story-training.jpg" alt=""><span data-i18n="story.pa">Conference Room</span></div>
       <div class="ph b"><img src="img/story-conference.jpg" alt=""><span data-i18n="story.pb">Meeting Room</span></div>
       <div class="ph c"><img src="img/story-lounge.jpg" alt=""><span data-i18n="story.pc">The Lounge</span></div>
-    </div>
+      <span class="tourtag"><span data-i18n="story.tourtag">Click to see the space</span> ↗</span>
+    </a>
   </div>
 </section>
 
@@ -774,7 +783,7 @@ footer .legal{border-top-color:var(--light-line);color:#8A94A8}
     'part.c1':'Eventos mensuales del capítulo','part.c1s':'Educación y networking en el Center','part.c2':'Educación bilingüe para compradores','part.c2s':'Talleres para compradores de primera vivienda en español y en inglés','part.c3':'Red nacional','part.c3s':'Referidos y capacitación de capítulos de NAHREP en todo el país',
     'story.eyebrow':'Nuestra historia','story.title':'Más que un espacio de trabajo',
     'story.p1':'El eXp Culture Center es una base física en Louisville, KY para que los agentes de eXp Realty se capaciten, colaboren y hagan crecer sus negocios juntos, sobre el modelo en la nube de eXp, con un lugar real para reunirse.',
-    'story.p2':'Lo llevamos agentes, para agentes. No reemplaza tu marca, tu equipo ni tu comisión. Les da un hogar a los tres.',
+    'story.tour':'Haz el recorrido virtual del espacio','story.tourtag':'Haz clic para ver el espacio','story.p2':'Lo llevamos agentes, para agentes. No reemplaza tu marca, tu equipo ni tu comisión. Les da un hogar a los tres.',
     'story.k1t':'Capacitación que lee los documentos','story.k1p':'Sesiones semanales sobre contratos, divulgaciones, inspecciones y negociación.',
     'story.k2t':'Una comunidad en dos idiomas','story.k2p':'Cada sesión y cada canal disponible en inglés y español, escrito por hispanohablantes.',
     'story.k3t':'Mentoría incluida','story.k3p':'Los agentes nuevos tienen un mentor certificado desde su primera semana.',
