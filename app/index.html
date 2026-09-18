@@ -88,7 +88,7 @@ input,select,textarea{font:inherit}
 .welcome{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--line2);min-height:150px}
 .welcome img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(.7)}
 .welcome::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,18,32,.35),rgba(11,18,32,.96) 75%)}
-.welcome .wtx{z-index:1}
+.welcome .wtx{z-index:2}
 .welcome .wtx{position:relative;padding:72px 16px 16px;text-shadow:0 1px 8px rgba(0,0,0,.6)}
 .welcome b{display:block;font-family:var(--display);font-size:20px;margin-top:6px;letter-spacing:-.02em}
 .welcome small{display:block;color:#C9D2E0;font-size:13px;margin-top:4px}
@@ -173,7 +173,20 @@ input,select,textarea{font:inherit}
 .banner{background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.35);color:#FFD28A;border-radius:12px;padding:10px 12px;font-size:12px;margin-bottom:12px}
 .install{display:none;background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:12px 14px;margin-top:14px;font-size:13px;color:var(--muted)}
 .install b{color:#fff;display:block;margin-bottom:2px}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.grad{background:linear-gradient(90deg,var(--blue),var(--violet),var(--coral),var(--violet),var(--blue));background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent}
+.orb{position:absolute;border-radius:50%;filter:blur(40px);pointer-events:none;mix-blend-mode:screen}
+.o1{width:260px;height:260px;left:-80px;top:-40px;background:radial-gradient(circle,rgba(60,135,247,.45),transparent 70%)}
+.o2{width:300px;height:300px;right:-120px;top:120px;background:radial-gradient(circle,rgba(124,92,240,.4),transparent 70%)}
+.o3{width:240px;height:240px;left:30%;bottom:-80px;background:radial-gradient(circle,rgba(255,90,60,.35),transparent 70%)}
+@media (prefers-reduced-motion:no-preference){
+  .grad{animation:shimmer 9s ease-in-out infinite alternate}
+  @keyframes shimmer{from{background-position:0% 50%}to{background-position:100% 50%}}
+  .o1{animation:drift 14s ease-in-out infinite alternate}.o2{animation:drift 18s ease-in-out infinite alternate-reverse}.o3{animation:drift 16s ease-in-out infinite alternate}
+  @keyframes drift{from{transform:translate(0,0)}to{transform:translate(30px,20px)}}
+}
+.welcome .orbs{position:absolute;inset:0;overflow:hidden;z-index:1}
+.welcome .orbs .orb{filter:blur(28px)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
@@ -182,8 +195,9 @@ input,select,textarea{font:inherit}
 <!-- ===== SIGN IN ===== -->
 <section class="screen auth" id="s-auth">
   <div class="bg" aria-hidden="true"></div>
+  <div class="orb o1" aria-hidden="true"></div><div class="orb o2" aria-hidden="true"></div><div class="orb o3" aria-hidden="true"></div>
   <div class="logo"><img src="img/exp-logo-white.png" alt="eXp Realty"><span data-i18n="app">Culture Center Louisville</span></div>
-  <h1 data-i18n="auth.title">Welcome to the Center</h1>
+  <h1><span data-i18n="auth.t1">Built by agents, for agents.</span> <span class="grad" data-i18n="auth.t2">In Louisville.</span></h1>
   <p data-i18n="auth.p">Events, room booking, chat, and the office directory, in one place. Sign in with your eXp email and we'll send you a link. No password.</p>
   <div class="field"><label for="a-email" data-i18n="auth.label">eXp email</label><input id="a-email" type="email" inputmode="email" autocomplete="email" placeholder="name@exprealty.com"></div>
   <button class="btn btn-primary btn-block" id="a-send" style="margin-top:14px" data-i18n="auth.send">Send me a link</button>
@@ -197,7 +211,8 @@ input,select,textarea{font:inherit}
   <div class="top"><div><h1><span data-i18n="home.hi">Welcome,</span> <span id="h-name">Brenda</span></h1><p class="sub" id="h-date"></p></div><div class="avatar" id="h-av">B</div></div>
     <div class="welcome" id="h-welcome">
     <img src="img/welcome.jpg" alt="">
-    <div class="wtx"><span class="eyebrow" style="color:#C9D2E0" data-i18n="home.weyebrow">eXp Culture Center Louisville</span><b data-i18n="home.wtitle">Built by agents, for agents.</b><small data-i18n="home.wsub">Book a room, RSVP to a training, message a colleague, see who just capped.</small></div>
+    <div class="orbs" aria-hidden="true"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
+    <div class="wtx"><span class="eyebrow" style="color:#C9D2E0" data-i18n="home.weyebrow">eXp Culture Center Louisville</span><b><span data-i18n="home.wtitle">Built by agents, for agents.</span><br><span class="grad" data-i18n="home.wtitle2">In Louisville.</span></b><small data-i18n="home.wsub">Book a room, RSVP to a training, message a colleague, see who just capped.</small></div>
   </div>
   <div class="sec-h" style="margin-top:22px"><h2 data-i18n="home.next">Next up</h2><button data-go="events" data-i18n="home.all">All events</button></div>
   <div id="h-next"></div>
@@ -359,7 +374,7 @@ function normSpot(s){ return { ...s, who:s.member_name }; }
    I18N
    ========================================================================== */
 const ES = {
-  'app':'Culture Center','auth.title':'Bienvenido al Center','auth.p':'Eventos, reservas de salas, chat y el directorio de la oficina, en un solo lugar. Entra con tu correo de eXp y te mandamos un enlace. Sin contraseña.','app':'Culture Center Louisville','home.weyebrow':'eXp Culture Center Louisville','home.wtitle':'Hecho por agentes, para agentes.','home.wsub':'Reserva una sala, confirma tu asistencia a una capacitación, escríbele a un colega, mira quién acaba de hacer cap.','auth.label':'Correo de eXp','auth.send':'Mándame el enlace','auth.note':'Solo para miembros del Culture Center. ¿Todavía no estás en la lista? Pídele a Francisco o a Andy que te agreguen.','auth.installb':'Agrégala a tu pantalla de inicio','auth.installp':'Toca Compartir y luego "Agregar a inicio" para que se abra como una app.','auth.demo':'Ver como Brenda (demo)',
+  'app':'Culture Center','auth.t1':'Hecho por agentes, para agentes.','auth.t2':'En Louisville.','auth.p':'Eventos, reservas de salas, chat y el directorio de la oficina, en un solo lugar. Entra con tu correo de eXp y te mandamos un enlace. Sin contraseña.','app':'Culture Center Louisville','home.weyebrow':'eXp Culture Center Louisville','home.wtitle':'Hecho por agentes, para agentes.','home.wtitle2':'En Louisville.','home.wsub':'Reserva una sala, confirma tu asistencia a una capacitación, escríbele a un colega, mira quién acaba de hacer cap.','auth.label':'Correo de eXp','auth.send':'Mándame el enlace','auth.note':'Solo para miembros del Culture Center. ¿Todavía no estás en la lista? Pídele a Francisco o a Andy que te agreguen.','auth.installb':'Agrégala a tu pantalla de inicio','auth.installp':'Toca Compartir y luego "Agregar a inicio" para que se abra como una app.','auth.demo':'Ver como Brenda (demo)',
   'demo.banner':'Vista previa con datos de ejemplo. Nada de esto se guarda en la oficina todavía.',
   'home.hi':'Hola,','home.next':'Lo que sigue','home.all':'Todos los eventos','home.open':'salas libres ahora','home.unread':'mensajes sin leer','home.spot':'Agente destacado','home.quick':'Acciones rápidas','home.q1':'Reservar una sala','home.q2':'Buscar a un agente',
   'ev.title':'Eventos','ev.new':'+ Nuevo evento','ev.up':'Próximos','ev.mine':'Míos','ev.past':'Pasados','ev.going':'van','ev.rsvp':'Confirmar','ev.goingBtn':'Voy','ev.cancel':'Ya no voy','ev.cal':'Agregar al calendario','ev.empty':'Nada por aquí todavía.',
