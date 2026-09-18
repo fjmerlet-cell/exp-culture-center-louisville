@@ -242,7 +242,7 @@ footer .brand .logo-img{height:34px}
 @media (max-width:520px){.perks{grid-template-columns:1fr}}
 
 /* partners */
-.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:56px}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:48px}
 .pcard{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:34px;display:grid;gap:18px;align-content:start;position:relative;overflow:hidden}
 .pcard::after{content:"";position:absolute;right:-80px;top:-80px;width:260px;height:260px;border-radius:50%;filter:blur(40px);opacity:.5}
 .pcard.lend::after{background:rgba(245,166,35,.25)}
@@ -264,6 +264,25 @@ footer .brand .logo-img{height:34px}
 .pcard.comm .stat b{font-family:var(--display);display:block;font-size:15px}
 .pcard.comm .stat span{color:var(--muted);font-size:13px}
 @media (max-width:820px){.pgrid{grid-template-columns:1fr}.pcard.comm{grid-template-columns:1fr}}
+.lgroup{margin-top:56px}
+.lhead{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+.lhead h3{font-family:var(--display);font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--light-muted);margin:0;font-weight:600}
+.lhead .line{flex:1;height:1px;background:var(--light-line)}
+.lhead .n{font-size:12px;color:var(--light-muted);opacity:.8}
+.lwall{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.ltile{position:relative;background:#fff;border:1px solid var(--light-line);border-radius:16px;height:104px;display:grid;place-items:center;padding:16px 20px;overflow:hidden;transition:transform .25s,box-shadow .25s,border-color .25s}
+.ltile img{max-width:100%;max-height:60px;object-fit:contain;filter:grayscale(1);opacity:.6;transition:.3s}
+.ltile .mk{display:flex;align-items:center;gap:10px}
+.ltile .mk img{max-height:52px;max-width:90px;flex:0 0 auto}
+.ltile .mk span{font-family:var(--display);font-weight:600;font-size:13px;line-height:1.1;color:var(--light-ink);white-space:nowrap}
+.ltile .lwho{position:absolute;left:0;right:0;bottom:0;background:var(--light-ink);color:#fff;font-size:12px;font-weight:600;padding:6px 10px;text-align:center;transform:translateY(100%);transition:.25s}
+.ltile:hover{transform:translateY(-3px);box-shadow:0 18px 40px rgba(11,18,32,.10);border-color:#C9D2E0}
+.ltile:hover img{filter:none;opacity:1}
+.ltile:hover .lwho{transform:none}
+@media (max-width:900px){.lwall{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:560px){.lwall{grid-template-columns:repeat(2,1fr);gap:10px}.ltile{height:88px;padding:12px 14px}.ltile img{max-height:48px}.ltile .mk{gap:8px}.ltile .mk img{max-width:56px;max-height:44px}.ltile .mk span{font-size:11px}}
+@media (hover:none){.ltile img{filter:none;opacity:1}}
+
 
 /* story (light) */
 .story{background:var(--light-bg);color:var(--light-ink)}
@@ -550,23 +569,38 @@ footer .legal{border-top-color:var(--light-line);color:#8A94A8}
       <h2 data-i18n="part.title">Backed by the team our agents already trust</h2>
       <p data-i18n="part.lead">The Culture Center partners with lenders, title companies, and community organizations that teach here, answer questions in both languages, and sit at the closing table with our clients.</p>
     </div>
+    <div class="lgroup">
+      <div class="lhead"><h3 data-i18n="part.lend">Lending partners</h3><span class="line"></span><span class="n">13</span></div>
+      <div class="lwall">
+        <div class="ltile"><img src="img/partners/casa-financial.png" alt="CASA Financial" loading="lazy"><div class="lwho">Manuel Tapia · Daniela Brenko</div></div>
+        <div class="ltile"><img src="img/partners/class-act-fcu.svg" alt="Class Act FCU" loading="lazy"><div class="lwho">Gabrielle Pierce</div></div>
+        <div class="ltile"><img src="img/partners/feria-financial.png" alt="Feria Financial" loading="lazy"><div class="lwho">Feria Financial</div></div>
+        <div class="ltile"><div class="mk"><img src="img/partners/prop-mortgage.png" alt="PropMortgage" loading="lazy"><span>Prop<br>Mortgage</span></div><div class="lwho">Ailin Zamora</div></div>
+        <div class="ltile"><img src="img/partners/chase.svg" alt="Chase" loading="lazy"><div class="lwho">Cindy Darnall</div></div>
+        <div class="ltile"><div class="mk"><img src="img/partners/leon-associates.png" alt="Leon &amp; Associates" loading="lazy"><span>Leon &amp;<br>Associates</span></div><div class="lwho">Leon &amp; Associates</div></div>
+        <div class="ltile"><img src="img/partners/stockton-mortgage.png" alt="Stockton Mortgage" loading="lazy"><div class="lwho">Stockton Mortgage</div></div>
+        <div class="ltile"><img src="img/partners/first-financial-bank.svg" alt="First Financial Bank" loading="lazy"><div class="lwho">First Financial Bank</div></div>
+        <div class="ltile"><img src="img/partners/fairway-mortgage.png" alt="Fairway Home Mortgage" loading="lazy"><div class="lwho">Fairway Home Mortgage</div></div>
+        <div class="ltile"><img src="img/partners/us-bank.svg" alt="U.S. Bank" loading="lazy"><div class="lwho">U.S. Bank</div></div>
+        <div class="ltile"><img src="img/partners/wesbanco.svg" alt="WesBanco" loading="lazy"><div class="lwho">WesBanco</div></div>
+        <div class="ltile"><div class="mk"><img src="img/partners/united-mortgage-lending.png" alt="United Mortgage Lending" loading="lazy"><span>United<br>Mortgage<br>Lending</span></div><div class="lwho">United Mortgage Lending</div></div>
+        <div class="ltile"><img src="img/partners/republic-bank.png" alt="Republic Bank" loading="lazy"><div class="lwho">Republic Bank</div></div>
+      </div>
+    </div>
+    <div class="lgroup">
+      <div class="lhead"><h3 data-i18n="part.title2">Title partners</h3><span class="line"></span><span class="n">8</span></div>
+      <div class="lwall">
+        <div class="ltile"><img src="img/partners/vista-title-group.png" alt="Vista Title Group" loading="lazy"><div class="lwho">Claudia</div></div>
+        <div class="ltile"><img src="img/partners/bluegrass-land-title.svg" alt="Bluegrass Land Title" loading="lazy"><div class="lwho">Bluegrass Land Title</div></div>
+        <div class="ltile"><img src="img/partners/agency-title.png" alt="Agency Title" loading="lazy"><div class="lwho">Beth · Julie</div></div>
+        <div class="ltile"><div class="mk"><img src="img/partners/signature-title.png" alt="Signature Title" loading="lazy"><span>Signature<br>Title</span></div><div class="lwho">Signature Title</div></div>
+        <div class="ltile"><img src="img/partners/louisville-title-agency.png" alt="Louisville Title Agency" loading="lazy"><div class="lwho">Louisville Title Agency</div></div>
+        <div class="ltile"><img src="img/partners/land-group-title.png" alt="Land Group Title" loading="lazy"><div class="lwho">Land Group Title</div></div>
+        <div class="ltile"><img src="img/partners/borders-borders.png" alt="Borders &amp; Borders" loading="lazy"><div class="lwho">Borders &amp; Borders</div></div>
+        <div class="ltile"><img src="img/partners/limestone-title.png" alt="Limestone Title &amp; Escrow" loading="lazy"><div class="lwho">Limestone Title &amp; Escrow</div></div>
+      </div>
+    </div>
     <div class="pgrid">
-      <div class="pcard lend">
-        <div class="who"><i>$</i><span data-i18n="part.lend">Lending partners</span></div>
-        <h3 data-i18n="part.lendh">The right loan, explained before anyone signs</h3>
-        <p data-i18n="part.lendp">Down payment assistance, FHA, VA, USDA, and conventional financing — walked through line by line, in English or Spanish.</p>
-        <ul class="plist two">
-          <li><i>CF</i>CASA Financial</li><li><i>CA</i>Class Act FCU</li><li><i>FF</i>Feria Financial</li><li><i>PM</i>Prop Mortgage</li><li><i>CH</i>Chase</li><li><i>LA</i>Leon &amp; Associates</li><li><i>SM</i>Stockton Mortgage</li><li><i>FB</i>First Financial Bank</li><li><i>FW</i>Fairway Mortgage</li><li><i>UB</i>US Bank</li><li><i>WB</i>Wesco Bank</li><li><i>UM</i>United Mortgage Lending</li><li><i>RB</i>Republic Bank</li>
-        </ul>
-      </div>
-      <div class="pcard title">
-        <div class="who"><i>⌂</i><span data-i18n="part.title2">Title partners</span></div>
-        <h3 data-i18n="part.titleh">Closings that protect you years after the keys</h3>
-        <p data-i18n="part.titlep">Title work, closings at the Center or at their offices, and the document review our agents rely on for every file.</p>
-        <ul class="plist two">
-          <li><i>VT</i>Vista Title Group</li><li><i>BT</i>Bluegrass Title</li><li><i>AT</i>Agency Title</li><li><i>ST</i>Signature Title</li><li><i>LT</i>Louisville Title</li><li><i>LG</i>Land Title Group</li><li><i>BB</i>Borders &amp; Borders</li><li><i>LM</i>Limestone Title</li>
-        </ul>
-      </div>
       <div class="pcard comm">
         <div>
           <div class="who"><i>★</i><span data-i18n="part.comm">Community partner</span></div>
