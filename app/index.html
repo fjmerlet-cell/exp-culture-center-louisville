@@ -680,7 +680,7 @@ function roomsTodayHTML(){
   const todays=store.bookings().filter(b=>new Date(b.starts_at)>=d0 && new Date(b.starts_at)<d1).sort((a,b)=>a.starts_at.localeCompare(b.starts_at));
   if(!todays.length) return `<div class="card" style="color:var(--muted);font-size:14px">${state.lang==='es'?'Ninguna sala reservada hoy. Todo está libre.':'No rooms booked today. Everything is open.'}</div>`;
   return todays.map(b=>{ const r=normRoom(store.rooms().find(x=>x.id===b.room_id)||{}); const m=store.members().find(x=>x.id===b.member_id); const live=new Date(b.starts_at)<=now && new Date(b.ends_at)>now; const over=new Date(b.ends_at)<=now;
-    return `<button class="item" data-go="spaces" style="${over?'opacity:.5':''}"><div class="ic ${r.ic||'b'}">${r.sym||'▢'}</div><div class="tx"><b>${esc(L(r,'name')||'')}</b><small>${fmtTime(b.starts_at)}–${fmtTime(b.ends_at)} · ${esc(m?m.full_name:'')}${b.member_id===db.me.id?(state.lang==='es'?' (tú)':' (you)'):''}</small></div><span class="r">${live?`<span class="pill busy">${state.lang==='es'?'Ahora':'Now'}</span>`:''}</span></button>`; }).join('');
+    return `<button class="item" data-binfo="${b.id}" style="${over?'opacity:.5':''}"><div class="ic ${r.ic||'b'}">${r.sym||'▢'}</div><div class="tx"><b>${esc(L(r,'name')||'')}${b.note?` · <span style="font-weight:500;color:var(--muted)">${esc(b.note)}</span>`:''}</b><small>${fmtTime(b.starts_at)}–${fmtTime(b.ends_at)} · ${esc(m?m.full_name:'')}${b.member_id===db.me.id?(state.lang==='es'?' (tú)':' (you)'):''}</small></div><span class="r">${live?`<span class="pill busy">${state.lang==='es'?'Ahora':'Now'}</span>`:''}</span></button>`; }).join('');
 }
 function roomStatus(r){
   if (r.soon) return `<span class="pill soon">${t('sp.soon')}</span>`;
@@ -690,7 +690,7 @@ function roomStatus(r){
 function renderSpaces(){
   $('#sp-list').innerHTML = store.rooms().map(normRoom).map(r=>`<button class="item" data-room="${r.id}" ${r.soon?'disabled style="opacity:.6"':''}><div class="ic ${r.ic}">${r.sym}</div><div class="tx"><b>${esc(L(r,'name'))}</b><small>${esc(L(r,'meta')||'')}${todayTimes(r)}</small></div><span class="r">${roomStatus(r)}</span></button>`).join('');
   const mine=store.bookings().filter(b=>b.member_id===db.me.id && new Date(b.ends_at)>new Date()).sort((a,b)=>a.starts_at.localeCompare(b.starts_at));
-  $('#sp-mine').innerHTML = mine.map(b=>{ const r=normRoom(store.rooms().find(x=>x.id===b.room_id)); return `<button class="item" data-bcal="${b.id}"><div class="ic ${r.ic}">${r.sym}</div><div class="tx"><b>${esc(L(r,'name'))}</b><small>${fmtDay(b.starts_at)} · ${fmtTime(b.starts_at)}–${fmtTime(b.ends_at)}</small></div><span class="r">›</span></button>`; }).join('') || `<div class="empty">${t('sp.none')}</div>`;
+  $('#sp-mine').innerHTML = mine.map(b=>{ const r=normRoom(store.rooms().find(x=>x.id===b.room_id)); return `<button class="item" data-bcal="${b.id}"><div class="ic ${r.ic}">${r.sym}</div><div class="tx"><b>${esc(L(r,'name'))}${b.note?` · <span style="font-weight:500;color:var(--muted)">${esc(b.note)}</span>`:''}</b><small>${fmtDay(b.starts_at)} · ${fmtTime(b.starts_at)}–${fmtTime(b.ends_at)}</small></div><span class="r">›</span></button>`; }).join('') || `<div class="empty">${t('sp.none')}</div>`;
 }
 // Booking rules. Common Space: weekdays after 5 PM only, weekends all day. Other rooms: 8 AM – 8 PM.
 const ALL_HOURS=[8,9,10,11,12,13,14,15,16,17,18,19];
@@ -699,34 +699,57 @@ function roomRule(r){ if(r.id!=='common') return ''; return state.lang==='es' ? 
 function hourLabel(h){ const d=new Date(); d.setHours(h,0,0,0); return d.toLocaleTimeString(loc(),{hour:'numeric'}); }
 function bookingCalSheet(b){
   const r=normRoom(store.rooms().find(x=>x.id===b.room_id));
-  openSheet(`<h2>${esc(L(r,'name'))}</h2><p class="meta">${fmtDay(b.starts_at)} · ${fmtTime(b.starts_at)}–${fmtTime(b.ends_at)}</p>
+  openSheet(`<h2>${esc(L(r,'name'))}</h2><p class="meta">${fmtDay(b.starts_at)} · ${fmtTime(b.starts_at)}–${fmtTime(b.ends_at)}</p>${b.note?`<p class="body">${esc(b.note)}</p>`:''}
     <p class="meta" style="margin-top:14px">${state.lang==='es'?'Agregar a tu calendario':'Add to your calendar'}</p>
     <div class="actions" style="margin-top:8px">${calButtons({title:(state.lang==='es'?'Reserva: ':'Room: ')+L(r,'name')+' · Culture Center',start:b.starts_at,end:b.ends_at,location:'eXp Culture Center Louisville, 8923 Stone Green Way Suite 200',desc:L(r,'meta')||'',uid:b.id})}</div>
     <p class="note" style="text-align:center;margin-top:18px"><button data-release="${b.id}" style="color:var(--red);font-weight:600">${t('sp.release')}</button></p>`);
 }
 document.addEventListener('click', async e=>{
   const bc=e.target.closest('[data-bcal]'); if (bc){ const b=store.bookings().find(x=>x.id===bc.dataset.bcal); if(b) bookingCalSheet(b); return; }
+  const bi=e.target.closest('[data-binfo]'); if (bi){ const b=store.bookings().find(x=>x.id===bi.dataset.binfo); if(!b) return; if(b.member_id===db.me.id) return bookingCalSheet(b);
+    const r=normRoom(store.rooms().find(x=>x.id===b.room_id)||{}); const m=store.members().find(x=>x.id===b.member_id); const es=state.lang==='es';
+    openSheet(`<h2>${esc(L(r,'name')||'')}</h2><p class="meta">${fmtDay(b.starts_at)} · ${fmtTime(b.starts_at)}–${fmtTime(b.ends_at)}</p>${b.note?`<p class="body">${esc(b.note)}</p>`:''}<p class="meta" style="margin-top:10px">${es?'Reservado por':'Booked by'} <b>${esc(m?m.full_name:'')}</b></p>
+      <div class="actions">${m?`<button class="btn btn-ghost" id="bi-dm">${t('dir.dm')}</button>`:''}<button class="btn btn-primary" data-go="spaces" id="bi-go">${es?'Reservar otra hora':'Book another time'}</button></div>
+      ${isAdmin()?`<p class="note" style="text-align:center;margin-top:16px"><button data-release="${b.id}" style="color:var(--red);font-weight:600">${es?'Cancelar esta reserva (admin)':'Cancel this booking (admin)'}</button></p>`:''}`);
+    const dm=$('#bi-dm'); if(dm&&m) dm.onclick=()=>{ closeSheet(); chFilter='dm'; $$('#ch-seg button').forEach(x=>x.setAttribute('aria-pressed', String(x.dataset.f==='dm'))); show('chat'); openThreadView(dmKey(db.me.id,m.id)); };
+    $('#bi-go').onclick=()=>closeSheet(); return; }
   const rel=e.target.closest('[data-release]'); if (rel){ try{ await q(sb.from('bookings').delete().eq('id',rel.dataset.release),'release'); }catch(err){ toast(err.message); return; } closeSheet(); await loadAll(); renderAll(); toast(t('toast.released')); return; }
   const b=e.target.closest('[data-room]'); if(!b) return;
-  const r=normRoom(store.rooms().find(x=>x.id===b.dataset.room)); let day=0, picked=null;
+  const r=normRoom(store.rooms().find(x=>x.id===b.dataset.room)); let day=0, a=null, z=null, note='', weeks=1;
+  const es=state.lang==='es'; const MAXH=4;
   const days=Array.from({length:28},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()+i); return {i, dow:d.toLocaleDateString(loc(),{weekday:'short'}), n:d.getDate(), mo:(i===0||d.getDate()===1)?d.toLocaleDateString(loc(),{month:'short'}):'', we:d.getDay()===0||d.getDay()===6}; });
-  function slotStart(h){ const d=new Date(); d.setDate(d.getDate()+day); d.setHours(h,0,0,0); return d; }
+  function slotStart(h, extraDays){ const d=new Date(); d.setDate(d.getDate()+day+(extraDays||0)); d.setHours(h,0,0,0); return d; }
+  function taken(h){ const st=slotStart(h), en=new Date(st.getTime()+36e5); return store.bookings().find(x=>x.room_id===r.id && new Date(x.starts_at)<en && new Date(x.ends_at)>st); }
   function draw(){
     const hours=roomHours(r, slotStart(8));
     const rule=roomRule(r);
+    const lo=a==null?null:Math.min(a,z??a), hi=a==null?null:Math.max(a,z??a);
+    const len=lo==null?0:hi-lo+1;
+    const summary=lo==null?'':`${hourLabel(lo)}–${hourLabel(hi+1)} · ${len} ${len===1?(es?'hora':'hour'):(es?'horas':'hours')}`;
     openSheet(`<span class="eyebrow">${esc(L(r,'meta')||'')}</span><h2 style="margin-top:8px">${esc(L(r,'name'))}</h2>
       ${rule?`<p class="note" style="margin-top:6px">${rule}</p>`:''}
       <div class="days">${days.map(d=>`<button data-day="${d.i}" aria-pressed="${d.i===day}" class="${d.we?'we':''}">${d.mo?`<i>${d.mo}</i>`:''}${d.dow}<b>${d.n}</b></button>`).join('')}</div>
-      <p class="meta" style="margin-top:12px">${t('sp.pick')}</p>
-      <div class="slots">${hours.map(h=>{ const s=slotStart(h), en=new Date(s.getTime()+36e5); const tk=store.bookings().find(x=>x.room_id===r.id && new Date(x.starts_at)<en && new Date(x.ends_at)>s); const mine=tk&&tk.member_id===db.me.id; const past=en<new Date(); return `<button class="slot ${tk?(mine?'mine':'busy'):(past?'busy':'')}" data-h="${h}" aria-pressed="${picked===h}">${hourLabel(h)}</button>`; }).join('')}</div>
-      <div class="actions"><button class="btn btn-primary" id="book" ${picked==null?'disabled':''}>${t('sp.book')}</button></div>`);
-    $$('[data-day]').forEach(x=>x.onclick=()=>{ day=+x.dataset.day; picked=null; draw(); });
+      <p class="meta" style="margin-top:12px">${a==null?(es?'Toca la hora de inicio':'Tap a start time'):(z==null?(es?'Toca la hora final (hasta 4 h) o reserva 1 hora':'Tap an end time (up to 4 h), or book the single hour'):summary)}</p>
+      <div class="slots">${hours.map(h=>{ const tk=taken(h); const mine=tk&&tk.member_id===db.me.id; const past=slotStart(h).getTime()+36e5<Date.now(); const inRange=lo!=null&&h>=lo&&h<=hi; return `<button class="slot ${tk?(mine?'mine':'busy'):(past?'busy':'')}" data-h="${h}" aria-pressed="${inRange}" title="${tk&&!mine?esc((store.members().find(m=>m.id===tk.member_id)||{}).full_name||''):''}">${hourLabel(h)}</button>`; }).join('')}</div>
+      ${lo!=null?`<div class="field" style="margin-top:12px"><label>${es?'Para qué (opcional)':'What for (optional)'}</label><input id="bk-note" placeholder="${es?'Reunión con cliente, grabación, capacitación…':'Client meeting, recording, training…'}" value="${esc(note)}"></div>
+      ${isAdmin()?`<div class="row"><div class="field"><label>${es?'Repetir cada semana':'Repeat weekly'}</label><select id="bk-weeks"><option value="1">${es?'Solo esta vez':'Just this once'}</option>${[2,3,4,6,8,12].map(n=>`<option value="${n}" ${weeks===n?'selected':''}>${n} ${es?'semanas':'weeks'}</option>`).join('')}</select></div></div>`:''}`:''}
+      <div class="actions"><button class="btn btn-primary" id="book" ${lo==null?'disabled':''}>${lo==null?t('sp.book'):(es?'Reservar ':'Book ')+summary}</button></div>`);
+    $$('[data-day]').forEach(x=>x.onclick=()=>{ day=+x.dataset.day; a=null; z=null; draw(); });
     const sel=$('[data-day][aria-pressed="true"]'); if(sel) sel.scrollIntoView({inline:'center',block:'nearest'});
-    $$('.slot:not(.busy):not(.mine)').forEach(x=>x.onclick=()=>{ picked=+x.dataset.h; draw(); });
-    $('#book').onclick=async()=>{ const s=slotStart(picked); const en=new Date(s.getTime()+36e5);
-      let made; try{ made=await q(sb.from('bookings').insert({room_id:r.id, member_id:db.me.id, starts_at:s.toISOString(), ends_at:en.toISOString()}).select().single(),'book'); }
-      catch(err){ toast(/exclusion|overlap|conflict/i.test(err.message)?(state.lang==='es'?'Ese horario ya está reservado.':'That time was just taken.'):err.message); await loadAll(); draw(); return; }
-      await loadAll(); renderAll(); toast(t('toast.booked')); bookingCalSheet(made); };
+    $$('.slot:not(.busy):not(.mine)').forEach(x=>x.onclick=()=>{ const h=+x.dataset.h;
+      if(a==null || (z!=null)){ a=h; z=null; }
+      else if(h===a){ a=null; z=null; }
+      else { const lo2=Math.min(a,h), hi2=Math.max(a,h); if(hi2-lo2+1>MAXH){ toast(es?'Máximo 4 horas por reserva.':'Bookings are 4 hours max.'); return; } for(let k=lo2;k<=hi2;k++){ if(taken(k)){ toast(es?'Hay una reserva en medio de ese rango.':'There is a booking in the middle of that range.'); return; } } z=h; }
+      const n=$('#bk-note'); if(n) note=n.value; draw(); });
+    const bn=$('#bk-note'); if(bn) bn.oninput=()=>{ note=bn.value; };
+    const bw=$('#bk-weeks'); if(bw) bw.onchange=()=>{ weeks=+bw.value; };
+    $('#book').onclick=async()=>{ if(lo==null) return; const rows=[]; for(let w=0;w<weeks;w++){ const st=slotStart(lo,w*7), en=slotStart(hi+1,w*7); rows.push({room_id:r.id, member_id:db.me.id, starts_at:st.toISOString(), ends_at:en.toISOString(), note:note.trim()||null}); }
+      let made=null, skipped=0;
+      for(const row of rows){ try{ const m=await q(sb.from('bookings').insert(row).select().single(),'book'); if(!made) made=m; }catch(err){ if(rows.length===1){ toast(/exclusion|overlap|conflict/i.test(err.message)?(es?'Ese horario ya está reservado.':'That time was just taken.'):err.message); await loadAll(); draw(); return; } skipped++; } }
+      await loadAll(); renderAll();
+      if(rows.length>1) toast((es?`Reservadas ${rows.length-skipped} de ${rows.length} semanas.`:`Booked ${rows.length-skipped} of ${rows.length} weeks.`)+(skipped?(es?' Las demás ya estaban ocupadas.':' The rest were already taken.'):''));
+      else toast(t('toast.booked'));
+      if(made) bookingCalSheet(made); };
   }
   draw();
 });
