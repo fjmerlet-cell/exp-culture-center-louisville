@@ -163,7 +163,7 @@ input,select,textarea{font:inherit}
 .search{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line2);border-radius:12px;padding:10px 12px;margin:12px 0}
 .search input{flex:1;background:none;border:0;color:#fff;font-size:15px;outline:none}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.chips span{font-size:11px;padding:3px 9px;border-radius:999px;background:var(--surface2);color:var(--muted)}
+.chips span{font-size:11px;padding:3px 9px;border-radius:999px;background:var(--surface2);color:var(--muted);border:1px solid transparent}
 
 /* sign in */
 .auth{min-height:100vh;flex-direction:column;justify-content:center;padding:calc(var(--sat) + 32px) 24px calc(var(--sab) + 32px);position:relative;overflow:hidden}
@@ -235,6 +235,8 @@ input,select,textarea{font:inherit}
     <div class="orbs" aria-hidden="true"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
     <div class="wtx"><span class="eyebrow" style="color:#C9D2E0" data-i18n="home.weyebrow">eXp Culture Center Louisville</span><b><span data-i18n="home.wtitle">Built by agents, for agents.</span><br><span class="grad" data-i18n="home.wtitle2">In Louisville.</span></b><small data-i18n="home.wsub">Book a room, RSVP to a training, message a colleague, see who just capped.</small></div>
   </div>
+  <div class="sec-h" style="margin-top:22px" id="h-ann-h"><h2 data-i18n="home.ann">Announcements</h2><span id="h-ann-n" style="font-size:12px;color:var(--muted)"></span></div>
+  <div id="h-ann"></div>
   <div class="sec-h" style="margin-top:22px"><h2 data-i18n="home.next">Next up</h2><button data-go="events" data-i18n="home.all">All events</button></div>
   <div id="h-next"></div>
   <div class="grid2">
@@ -312,6 +314,7 @@ input,select,textarea{font:inherit}
     </div>
   </div>
   <div class="sec" id="admin-sec" hidden><div class="sec-h"><h2 data-i18n="more.admin">Admin</h2></div>
+    <button class="item" id="adm-ann"><div class="ic v">📣</div><div class="tx"><b data-i18n="adm5">Post an announcement</b><small data-i18n="adm5s">Everyone sees it on Home; you see who read it</small></div></button>
     <button class="item" data-adm="event"><div class="ic b">＋</div><div class="tx"><b data-i18n="adm1">Post an event</b><small data-i18n="adm1s">Training, mastermind, mixer</small></div></button>
     <button class="item" data-adm="spot"><div class="ic c">★</div><div class="tx"><b data-i18n="adm2">Post a spotlight</b><small data-i18n="adm2s">Capping, ICON, first closing</small></div></button>
     <button class="item" id="adm-res"><div class="ic a">▤</div><div class="tx"><b data-i18n="adm4">Add a resource</b><small data-i18n="adm4s">Forms, toolkits, links, documents</small></div></button>
@@ -357,7 +360,7 @@ try { const s=JSON.parse(localStorage.getItem(LS_KEY)||'null'); if (s && s.lang)
 function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({lang:state.lang})); }catch(e){} }
 
 // In-memory cache, refreshed from the database
-const db = { me:null, members:[], rooms:[], events:[], rsvps:[], bookings:[], spotlights:[], channels:[], msgs:{}, lastSeen:{}, resources:[], checkins:[], partners:[] };
+const db = { me:null, members:[], rooms:[], events:[], rsvps:[], bookings:[], spotlights:[], channels:[], msgs:{}, lastSeen:{}, resources:[], checkins:[], partners:[], anns:[], annReads:[] };
 try { db.lastSeen = JSON.parse(localStorage.getItem('ccl-seen')||'{}'); } catch(e){}
 function markSeen(id){ db.lastSeen[id]=new Date().toISOString(); try{ localStorage.setItem('ccl-seen', JSON.stringify(db.lastSeen)); }catch(e){} }
 
@@ -366,7 +369,7 @@ function dmKey(a,b){ return [a,b].sort().join(':'); }
 
 async function loadAll(){
   const now = new Date(); const from = new Date(now); from.setDate(from.getDate()-1); const to = new Date(now); to.setDate(to.getDate()+35);
-  const [members, rooms, events, rsvps, bookings, spotlights, channels, recent, resources, checkins, partners] = await Promise.all([
+  const [members, rooms, events, rsvps, bookings, spotlights, channels, recent, resources, checkins, partners, anns, annReads] = await Promise.all([
     q(sb.from('members').select('*').eq('active',true).order('full_name'),'members'),
     q(sb.from('rooms').select('*').order('sort'),'rooms'),
     q(sb.from('events').select('*').gte('starts_at', new Date(now.getTime()-90*864e5).toISOString()).order('starts_at'),'events'),
@@ -377,9 +380,11 @@ async function loadAll(){
     q(sb.from('messages').select('id,channel_id,dm_key,sender_id,body,created_at').order('created_at',{ascending:false}).limit(300),'messages'),
     sb.from('resources').select('*').order('pinned',{ascending:false}).order('sort').order('created_at',{ascending:false}).then(r=>r.data||[]),
     sb.from('checkins').select('*').then(r=>r.data||[]),
-    sb.from('partners').select('*').eq('active',true).order('sort').order('name').then(r=>r.data||[])
+    sb.from('partners').select('*').eq('active',true).order('sort').order('name').then(r=>r.data||[]),
+    sb.from('announcements').select('*').order('pinned',{ascending:false}).order('created_at',{ascending:false}).limit(30).then(r=>r.data||[]),
+    sb.from('announcement_reads').select('*').then(r=>r.data||[])
   ]);
-  Object.assign(db,{members,rooms,events,rsvps,bookings,spotlights,channels,resources,checkins,partners});
+  Object.assign(db,{members,rooms,events,rsvps,bookings,spotlights,channels,resources,checkins,partners,anns,annReads});
   db.msgs={}; recent.reverse().forEach(m=>{ const k=m.channel_id||m.dm_key; (db.msgs[k]=db.msgs[k]||[]).push(m); });
 }
 
@@ -417,7 +422,7 @@ function normSpot(s){ return { ...s, who:s.member_name }; }
 const ES = {
   'app':'Culture Center','auth.t1':'Hecho por agentes, para agentes.','auth.t2':'En Louisville.','auth.p':'Eventos, reservas de salas, chat y el directorio de la oficina, en un solo lugar. Escribe tu correo de eXp y te mandamos un código. Sin contraseña.','app':'Culture Center Louisville','home.weyebrow':'eXp Culture Center Louisville','home.wtitle':'Hecho por agentes, para agentes.','home.wtitle2':'En Louisville.','home.wsub':'Reserva una sala, confirma tu asistencia a una capacitación, escríbele a un colega, mira quién acaba de hacer cap.','auth.label':'Correo de eXp','auth.send':'Mándame un código','auth.codelabel':'Código del correo','auth.verify':'Entrar','auth.resend':'Mandar otro código','auth.note':'Solo para miembros del Culture Center. ¿Todavía no estás en la lista? Pídele a Francisco o a Andy que te agreguen.','auth.installb':'Agrégala a tu pantalla de inicio','auth.installp':'Toca Compartir y luego "Agregar a inicio" para que se abra como una app.','auth.demo':'Ver como Brenda (demo)',
   'demo.banner':'Vista previa con datos de ejemplo. Nada de esto se guarda en la oficina todavía.',
-  'home.hi':'Hola,','home.next':'Lo que sigue','home.all':'Todos los eventos','home.open':'salas libres ahora','home.rooms':'Salas hoy','home.book':'Reservar','home.unread':'mensajes sin leer','home.spot':'Agente destacado','home.quick':'Acciones rápidas','home.q1':'Reservar una sala','home.q2':'Buscar a un agente',
+  'home.hi':'Hola,','home.next':'Lo que sigue','home.all':'Todos los eventos','home.open':'salas libres ahora','home.rooms':'Salas hoy','home.ann':'Anuncios','adm5':'Publicar un anuncio','adm5s':'Todos lo ven en Inicio; tú ves quién lo leyó','home.book':'Reservar','home.unread':'mensajes sin leer','home.spot':'Agente destacado','home.quick':'Acciones rápidas','home.q1':'Reservar una sala','home.q2':'Buscar a un agente',
   'ev.title':'Eventos','ev.new':'+ Nuevo evento','ev.up':'Próximos','ev.mine':'Míos','ev.past':'Pasados','ev.going':'van','ev.rsvp':'Confirmar','ev.goingBtn':'Voy','ev.cancel':'Ya no voy','ev.cal':'Agregar al calendario','ev.empty':'Nada por aquí todavía.',
   'sp.title':'Reserva un espacio','sp.sub':'Elige un espacio para ver su disponibilidad.','sp.mine':'Mis reservas','sp.open':'Libre','sp.busy':'Ocupada','sp.soon':'Muy pronto','sp.book':'Reservar','sp.pick':'Elige un horario','sp.none':'Todavía no tienes reservas.','sp.booked':'Reservado','sp.release':'Cancelar reserva',
   'ch.title':'Chat','ch.new':'+ Nuevo mensaje','ch.channels':'Canales','ch.dm':'Mensajes directos','ch.back':'Chat','ch.send':'Enviar','ch.ph':'Mensaje…',
@@ -430,7 +435,7 @@ const ES = {
 const EN = {};
 document.querySelectorAll('[data-i18n]').forEach(el=>{ EN[el.dataset.i18n]=el.innerHTML; });
 document.querySelectorAll('[data-i18n-ph]').forEach(el=>{ EN[el.dataset.i18nPh]=el.placeholder; });
-Object.assign(EN,{ 'dir.agents':'Agents','dir.partners':'Partners','pt.new':'Partner','pt.lender':'Lenders','pt.title':'Title','pt.vendor':'Vendors','pt.community':'Community','home.rooms':'Rooms today','home.book':'Book','ev.going':'going','ev.rsvp':'RSVP','ev.goingBtn':'Going','ev.cancel':"Can't make it",'ev.cal':'Add to calendar','ev.empty':'Nothing here yet.','sp.open':'Open','sp.busy':'Booked','sp.soon':'Coming soon','sp.book':'Book','sp.pick':'Pick a time','sp.none':'No bookings yet.','sp.booked':'Booked','sp.release':'Cancel booking','dir.members':'members','dir.call':'Call','dir.text':'Text','dir.email':'Email','dir.dm':'Message','adm.evTitle':'New event','adm.spTitle':'New spotlight','adm.mbTitle':'New member','adm.save':'Post','f.title':'Title','f.when':'Date & time','f.where':'Where','f.lang':'Language','f.desc':'Description','f.who':'Agent','f.what':'Milestone','f.note':'Note','f.name':'Name','f.email':'eXp email','f.saved':'Posted','f.added':'Member added','toast.rsvp':"You're in. See you there.",'toast.unrsvp':'RSVP removed.','toast.booked':'Room booked.','toast.released':'Booking cancelled.','toast.sent':'Sent.','toast.link':'Link sent (demo). Check your email.','toast.demo':'Preview only' });
+Object.assign(EN,{ 'home.ann':'Announcements','adm5':'Post an announcement','adm5s':'Everyone sees it on Home; you see who read it','dir.agents':'Agents','dir.partners':'Partners','pt.new':'Partner','pt.lender':'Lenders','pt.title':'Title','pt.vendor':'Vendors','pt.community':'Community','home.rooms':'Rooms today','home.book':'Book','ev.going':'going','ev.rsvp':'RSVP','ev.goingBtn':'Going','ev.cancel':"Can't make it",'ev.cal':'Add to calendar','ev.empty':'Nothing here yet.','sp.open':'Open','sp.busy':'Booked','sp.soon':'Coming soon','sp.book':'Book','sp.pick':'Pick a time','sp.none':'No bookings yet.','sp.booked':'Booked','sp.release':'Cancel booking','dir.members':'members','dir.call':'Call','dir.text':'Text','dir.email':'Email','dir.dm':'Message','adm.evTitle':'New event','adm.spTitle':'New spotlight','adm.mbTitle':'New member','adm.save':'Post','f.title':'Title','f.when':'Date & time','f.where':'Where','f.lang':'Language','f.desc':'Description','f.who':'Agent','f.what':'Milestone','f.note':'Note','f.name':'Name','f.email':'eXp email','f.saved':'Posted','f.added':'Member added','toast.rsvp':"You're in. See you there.",'toast.unrsvp':'RSVP removed.','toast.booked':'Room booked.','toast.released':'Booking cancelled.','toast.sent':'Sent.','toast.link':'Link sent (demo). Check your email.','toast.demo':'Preview only' });
 function t(k){ return (state.lang==='es' ? ES[k] : EN[k]) ?? EN[k] ?? k; }
 function L(obj, key){ return state.lang==='es' && obj[key+'_es'] ? obj[key+'_es'] : obj[key]; }
 function applyLang(){
@@ -560,6 +565,7 @@ function renderHome(){
   const openCount=store.rooms().map(normRoom).filter(r=>r.open && !store.bookings().some(b=>b.room_id===r.id && new Date(b.starts_at)<=now && new Date(b.ends_at)>now)).length;
   $('#h-open').textContent=openCount;
   $('#h-rooms').innerHTML = roomsTodayHTML();
+  renderAnnouncements();
   $('#h-unread').textContent=store.channels().reduce((n,c)=>n+store.unread(c.id),0)+store.dms().reduce((n,d)=>n+store.unread(d.id),0);
   const sp=store.spotlights().map(normSpot);
   $('#h-spot').innerHTML = sp.map((s,i)=> i===0
@@ -626,6 +632,49 @@ async function renderAttendance(ev){
 function todayTimes(r){ const d0=new Date(); d0.setHours(0,0,0,0); const d1=new Date(d0.getTime()+864e5);
   const ts=store.bookings().filter(b=>b.room_id===r.id && new Date(b.starts_at)>=d0 && new Date(b.starts_at)<d1).sort((a,b)=>a.starts_at.localeCompare(b.starts_at)).map(b=>fmtTime(b.starts_at).replace(':00','')+'–'+fmtTime(b.ends_at).replace(':00',''));
   return ts.length?`<br><span style="color:var(--amber)">${state.lang==='es'?'Hoy':'Today'}: ${ts.join(', ')}</span>`:''; }
+function annRead(id){ return db.annReads.some(r=>r.announcement_id===id && r.member_id===db.me.id); }
+function annReaders(id){ return db.annReads.filter(r=>r.announcement_id===id); }
+function renderAnnouncements(){
+  const now=new Date(); const list=db.anns.filter(a=>!a.expires_at || new Date(a.expires_at)>now);
+  const unread=list.filter(a=>!annRead(a.id)).length; const es=state.lang==='es';
+  $('#h-ann-n').textContent = unread ? `${unread} ${es?'sin leer':'unread'}` : '';
+  const show=list.slice(0,3);
+  $('#h-ann').innerHTML = show.map(a=>`<button class="item" data-ann="${a.id}" style="${annRead(a.id)?'':'border-color:rgba(60,135,247,.6)'}"><div class="ic v">${a.pinned?'📌':'📣'}</div><div class="tx"><b>${annRead(a.id)?'':'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--blue);margin-right:6px;vertical-align:middle"></span>'}${esc(L(a,'title'))}</b><small>${fmtDay(a.created_at)}${isAdmin()?` · ${es?'leído por':'read by'} ${annReaders(a.id).length}/${store.members().length}`:''}</small></div><span class="r">›</span></button>`).join('')
+    + (list.length>3?`<p class="note" style="text-align:center;margin-top:8px"><button id="ann-all" style="color:var(--blue);font-weight:600">${es?'Ver todos':'See all'} (${list.length})</button></p>`:'')
+    || `<div class="card" style="color:var(--muted);font-size:14px">${es?'No hay anuncios por ahora.':'No announcements right now.'}${isAdmin()?` <button id="ann-first" style="color:var(--blue);font-weight:600">${es?'Publicar uno':'Post one'}</button>`:''}</div>`;
+  const all=$('#ann-all'); if(all) all.onclick=()=>openSheet(`<h2>${es?'Anuncios':'Announcements'}</h2>`+list.map(a=>`<button class="item" data-ann="${a.id}"><div class="ic v">${a.pinned?'📌':'📣'}</div><div class="tx"><b>${esc(L(a,'title'))}</b><small>${fmtDay(a.created_at)}${annRead(a.id)?'':' · <span style="color:var(--blue)">'+(es?'nuevo':'new')+'</span>'}</small></div><span class="r">›</span></button>`).join(''));
+  const first=$('#ann-first'); if(first) first.onclick=()=>announcementForm();
+}
+async function openAnnouncement(a){
+  const es=state.lang==='es';
+  if(!annRead(a.id)){ sb.from('announcement_reads').insert({announcement_id:a.id, member_id:db.me.id}).then(()=>{ db.annReads.push({announcement_id:a.id, member_id:db.me.id, read_at:new Date().toISOString()}); renderAnnouncements(); }); }
+  const by=store.members().find(m=>m.id===a.created_by);
+  let admin='';
+  if(isAdmin()){ const rs=annReaders(a.id); const readIds=new Set(rs.map(r=>r.member_id)); const readers=store.members().filter(m=>readIds.has(m.id)); const not=store.members().filter(m=>!readIds.has(m.id));
+    admin=`<div class="sec" style="margin-top:18px"><div class="sec-h"><h2>${es?'Leído por':'Read by'} ${readers.length}/${store.members().length}</h2></div>
+      <div class="chips">${readers.map(m=>`<span style="border-color:var(--green);color:var(--green)">✓ ${esc(m.full_name.split(' ')[0])} ${esc((m.full_name.split(' ')[1]||'').slice(0,1))}.</span>`).join('')}</div>
+      ${not.length?`<p class="meta" style="margin-top:12px">${es?'Todavía no lo han visto':'Haven\'t seen it yet'} (${not.length})</p><div class="chips" style="margin-top:6px">${not.map(m=>`<span>${esc(m.full_name.split(' ')[0])} ${esc((m.full_name.split(' ')[1]||'').slice(0,1))}.</span>`).join('')}</div>`:''}
+      <p class="note" style="text-align:center;margin-top:16px"><button id="ann-edit" style="color:var(--blue);font-weight:600">${es?'Editar':'Edit'}</button> · <button id="ann-del" style="color:var(--red);font-weight:600">${es?'Eliminar':'Delete'}</button></p></div>`; }
+  openSheet(`<span class="eyebrow">${a.pinned?'📌 ':''}${es?'Anuncio':'Announcement'} · ${fmtDay(a.created_at)}${by?' · '+esc(by.full_name.split(' ')[0]):''}</span><h2 style="margin-top:8px">${esc(L(a,'title'))}</h2><p class="body" style="white-space:pre-wrap">${esc(L(a,'body'))}</p>${admin}`);
+  const ed=$('#ann-edit'); if(ed) ed.onclick=()=>announcementForm(a);
+  const dl=$('#ann-del'); if(dl) dl.onclick=async()=>{ if(!confirm(es?'¿Eliminar este anuncio?':'Delete this announcement?')) return; await q(sb.from('announcements').delete().eq('id',a.id),'del'); closeSheet(); await loadAll(); renderAll(); };
+}
+function announcementForm(a){
+  const es=state.lang==='es'; const v=k=>esc(a&&a[k]||'');
+  openSheet(`<h2>${a?(es?'Editar anuncio':'Edit announcement'):(es?'Nuevo anuncio':'New announcement')}</h2>
+    <div class="field"><label>${es?'Título':'Title'}</label><input id="an-title" value="${v('title')}"></div>
+    <div class="field"><label>${es?'Mensaje':'Message'}</label><textarea id="an-body" rows="5">${v('body')}</textarea></div>
+    <div class="field"><label>${es?'Título en español (opcional)':'Spanish title (optional)'}</label><input id="an-title-es" value="${v('title_es')}"></div>
+    <div class="field"><label>${es?'Mensaje en español (opcional)':'Spanish message (optional)'}</label><textarea id="an-body-es" rows="3">${v('body_es')}</textarea></div>
+    <div class="row"><div class="field"><label>${es?'Fijar arriba':'Pin to top'}</label><select id="an-pin"><option value="">${es?'No':'No'}</option><option value="1" ${a&&a.pinned?'selected':''}>${es?'Sí':'Yes'}</option></select></div><div class="field"><label>${es?'Ocultar después de':'Hide after'}</label><input id="an-exp" type="date" value="${a&&a.expires_at?String(a.expires_at).slice(0,10):''}"></div></div>
+    ${a?'':`<p class="note">${es?'También se publica en #general, así todos reciben la notificación.':'Also posts to #general so everyone gets the push notification.'}</p>`}
+    <div class="actions"><button class="btn btn-primary" id="an-save">${a?(es?'Guardar':'Save'):t('adm.save')}</button></div>`);
+  $('#an-save').onclick=async()=>{ const title=$('#an-title').value.trim(), body=$('#an-body').value.trim(); if(!title||!body){ $('#an-title').focus(); return; }
+    const row={title, body, title_es:$('#an-title-es').value.trim()||null, body_es:$('#an-body-es').value.trim()||null, pinned:!!$('#an-pin').value, expires_at:$('#an-exp').value?new Date($('#an-exp').value+'T23:59:59').toISOString():null};
+    try{ if(a) await q(sb.from('announcements').update(row).eq('id',a.id),'ann'); else await q(sb.from('announcements').insert({...row, created_by:db.me.id}),'ann'); }catch(e){ toast(e.message); return; }
+    closeSheet(); await loadAll(); renderAll(); toast(es?'Publicado.':'Posted.'); };
+}
+document.addEventListener('click', e=>{ const b=e.target.closest('[data-ann]'); if(b){ const a=db.anns.find(x=>x.id===b.dataset.ann); if(a) openAnnouncement(a); } });
 function roomsTodayHTML(){
   const now=new Date(), d0=new Date(now); d0.setHours(0,0,0,0); const d1=new Date(d0.getTime()+864e5);
   const todays=store.bookings().filter(b=>new Date(b.starts_at)>=d0 && new Date(b.starts_at)<d1).sort((a,b)=>a.starts_at.localeCompare(b.starts_at));
@@ -747,6 +796,7 @@ $('#dir-q').addEventListener('input', renderDirectory);
 $$('#dir-seg button').forEach(b=>b.addEventListener('click',()=>{ $$('#dir-seg button').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); dirMode=b.dataset.f; renderDirectory(); }));
 $$('#pt-seg button').forEach(b=>b.addEventListener('click',()=>{ $$('#pt-seg button').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); ptCat=b.dataset.c; renderDirectory(); }));
 $('#pt-new').addEventListener('click',()=>partnerForm());
+$('#adm-ann').addEventListener('click',()=>announcementForm());
 document.addEventListener('click', e=>{
   const b=e.target.closest('[data-partner]'); if(!b) return; const p=db.partners.find(x=>x.id===b.dataset.partner); if(!p) return;
   const tel=(p.phone||'').replace(/\D/g,'');
