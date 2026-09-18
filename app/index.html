@@ -277,7 +277,7 @@ input,select,textarea{font:inherit}
 <section class="screen" id="s-more">
   <div class="top"><h1 data-i18n="more.title">You</h1><div class="lang" id="lang"><button data-lang="en" aria-pressed="true">EN</button><button data-lang="es" aria-pressed="false">ES</button></div></div>
   <div class="card" style="display:flex;gap:14px;align-items:center"><div class="avatar lg edit" id="m-av" title="Change photo">B</div><input type="file" id="m-file" accept="image/*" hidden><div><b id="m-name" style="font-family:var(--display);font-size:18px">Brenda</b><div style="color:var(--muted);font-size:13px" id="m-email"></div><div class="chips" id="m-chips"></div></div></div>
-  <div class="sec"><div class="sec-h"><h2 data-i18n="more.notif">Notifications</h2></div>
+  <div class="sec"><div class="sec-h"><h2 data-i18n="more.notif">Notifications</h2><span id="push-state" style="font-size:12px;color:var(--muted)"></span></div>
     <div class="card" style="padding:0 16px">
       <div class="toggle"><div><b data-i18n="n1">Booking confirmations</b><small data-i18n="n1s">When a room is booked or released</small></div><button class="sw" role="switch" aria-checked="true" data-n="book"></button></div>
       <div class="toggle"><div><b data-i18n="n2">Event reminders</b><small data-i18n="n2s">The morning of anything you RSVP'd to</small></div><button class="sw" role="switch" aria-checked="true" data-n="event"></button></div>
@@ -453,7 +453,7 @@ document.addEventListener('click', e=>{ const g=e.target.closest('[data-go]'); i
 function showAuth(msg){ $('#tabs').hidden=true; $$('.screen').forEach(x=>x.classList.remove('active')); $('#s-auth').classList.add('active'); $('#a-msg').textContent=msg||''; }
 async function enterApp(){
   try { await loadAll(); } catch(e){ showAuth(state.lang==='es'?'No se pudo cargar. Revisa tu conexión.':'Could not load. Check your connection.'); return; }
-  $('#s-auth').classList.remove('active'); $('#tabs').hidden=false; show('home'); subscribeMessages();
+  $('#s-auth').classList.remove('active'); $('#tabs').hidden=false; const h0=location.hash.replace('#',''); show(['home','events','spaces','chat','directory','more'].includes(h0)?h0:'home'); subscribeMessages(); refreshPush();
 }
 async function resolveSession(session){
   if (!session){ showAuth(); return; }
@@ -667,6 +667,8 @@ function renderMore(){
   $('#admin-sec').hidden=!isAdmin();
   const prefs=db.me.prefs||{};
   $$('.sw').forEach(s=>s.setAttribute('aria-checked', String(!!prefs[s.dataset.n])));
+  const ps=$('#push-state'); if (ps){ const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    ps.textContent = !pushSupported() ? '' : Notification.permission==='granted' ? (state.lang==='es'?'Activas en este teléfono':'On for this phone') : (/iphone|ipad/i.test(navigator.userAgent)&&!standalone) ? (state.lang==='es'?'Agrega la app a inicio para activarlas':'Add to home screen to enable') : (state.lang==='es'?'Toca un interruptor para activarlas':'Flip a switch to enable'); }
 }
 $('#m-av').addEventListener('click', ()=>$('#m-file').click());
 $('#m-file').addEventListener('change', async ()=>{
@@ -691,7 +693,29 @@ function resizeImage(file, max){
       URL.revokeObjectURL(u); c.toBlob(b=>b?res(b):rej(new Error('Could not process image')),'image/jpeg',.85); };
     img.onerror=()=>rej(new Error('Could not read image')); img.src=u; });
 }
-$$('.sw').forEach(s=>s.addEventListener('click', async ()=>{ const prefs={...(db.me.prefs||{})}; prefs[s.dataset.n]=!prefs[s.dataset.n]; db.me.prefs=prefs; renderMore(); await sb.from('members').update({prefs}).eq('id',db.me.id); }));
+const VAPID_PUBLIC='BKzqVpSoRrPWxMO4pnH1CPLjnxMnJdjiJMrjEOPXIBbfZzye0QMhClFOQgWHrtXJJsEeS7xc8X58XPrZqNzpiW0';
+function b64ToU8(b){ const p='='.repeat((4-b.length%4)%4); const s=(b+p).replace(/-/g,'+').replace(/_/g,'/'); const r=atob(s); return Uint8Array.from([...r].map(c=>c.charCodeAt(0))); }
+function pushSupported(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+async function enablePush(){
+  if (!pushSupported()){ toast(state.lang==='es'?'Este teléfono no admite notificaciones aquí.':'This phone does not support notifications here.'); return false; }
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  if (/iphone|ipad/i.test(navigator.userAgent) && !standalone){ toast(state.lang==='es'?'Agrega la app a tu pantalla de inicio primero (Compartir → Agregar a inicio).':'Add the app to your home screen first (Share → Add to Home Screen).'); return false; }
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted'){ toast(state.lang==='es'?'Las notificaciones están bloqueadas en Ajustes.':'Notifications are blocked in Settings.'); return false; }
+  const reg = await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: b64ToU8(VAPID_PUBLIC) });
+  const j = sub.toJSON();
+  await q(sb.from('push_subscriptions').upsert({ member_id: db.me.id, endpoint: sub.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, user_agent: navigator.userAgent.slice(0,200), last_seen: new Date().toISOString() }, { onConflict:'endpoint' }), 'push');
+  return true;
+}
+async function refreshPush(){ try{ if (!pushSupported() || Notification.permission!=='granted') return; const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription(); if (sub){ const j=sub.toJSON(); await sb.from('push_subscriptions').upsert({ member_id: db.me.id, endpoint: sub.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, last_seen: new Date().toISOString() }, { onConflict:'endpoint' }); } }catch(e){} }
+$$('.sw').forEach(s=>s.addEventListener('click', async ()=>{
+  const prefs={...(db.me.prefs||{})}; const turningOn=!prefs[s.dataset.n];
+  if (turningOn && s.dataset.n!=='quiet'){ const ok=await enablePush(); if(!ok) return; }
+  prefs[s.dataset.n]=!prefs[s.dataset.n]; db.me.prefs=prefs; renderMore(); await sb.from('members').update({prefs}).eq('id',db.me.id);
+  if (turningOn && s.dataset.n!=='quiet') toast(state.lang==='es'?'Notificaciones activadas':'Notifications on');
+}));
 $$('#lang button').forEach(b=>b.addEventListener('click',()=>{ state.lang=b.dataset.lang; save(); applyLang(); }));
 
 /* admin forms — write straight to the database */
@@ -738,6 +762,7 @@ $('#ev-new').addEventListener('click',()=>adminForm('event'));
    ========================================================================== */
 applyLang();
 showAuth();
+window.addEventListener('hashchange',()=>{ const h=location.hash.replace('#',''); if(db.me && ['home','events','spaces','chat','directory','more'].includes(h)) show(h); });
 const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
 if (!standalone && /iphone|ipad/i.test(navigator.userAgent)) $('#install-tip').style.display='block';
 if ('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
