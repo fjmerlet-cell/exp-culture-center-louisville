@@ -59,7 +59,9 @@ section{position:relative;padding-block:96px}
 .brand{display:flex;align-items:center;gap:14px;text-decoration:none;font-family:var(--display);font-weight:600;font-size:17px}
 .brand .logo{font-family:var(--display);font-weight:700;font-size:26px;letter-spacing:-.05em;line-height:1;display:flex;flex-direction:column;align-items:center}
 .brand .logo small{font-size:7px;letter-spacing:.32em;font-weight:600;margin-top:-1px}
+.brand .logo-img{height:30px;width:auto;display:block}
 .brand .sep{width:1px;height:26px;background:var(--line2)}
+footer .brand .logo-img{filter:invert(1) brightness(0.1)}
 .nav ul{list-style:none;display:flex;gap:28px;margin:0 auto;padding:0;font-size:14px;font-weight:500}
 .nav ul a{text-decoration:none;color:var(--muted);transition:color .15s}
 .nav ul a:hover{color:#fff}
@@ -361,7 +363,7 @@ footer .legal{border-top-color:var(--light-line);color:#8A94A8}
 
 <header class="nav">
   <div class="wrap">
-    <a class="brand" href="#top"><span class="logo">eXp<small>REALTY</small></span><span class="sep"></span><span class="txt" data-i18n="brand">Culture Center</span></a>
+    <a class="brand" href="#top"><img class="logo-img" src="img/exp-logo-white.png" alt="eXp Realty"><span class="sep"></span><span class="txt" data-i18n="brand">Culture Center Louisville</span></a>
     <ul>
       <li><a href="#features" data-i18n="nav.features">Features</a></li>
       <li><a href="#network" data-i18n="nav.network">Community</a></li>
@@ -374,7 +376,7 @@ footer .legal{border-top-color:var(--light-line);color:#8A94A8}
       <button type="button" id="lang-en" data-lang="en" aria-pressed="true">EN</button>
       <button type="button" id="lang-es" data-lang="es" aria-pressed="false">ES</button>
     </div>
-    <a class="btn btn-coral btn-sm" href="#features" data-i18n="nav.app">Get the App</a>
+    <a class="btn btn-coral btn-sm" href="app/" data-i18n="nav.app">Get the App</a>
   </div>
 </header>
 
@@ -391,7 +393,7 @@ footer .legal{border-top-color:var(--light-line);color:#8A94A8}
   <div class="shade"></div>
   <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
   <div class="wrap">
-    <span class="badge"><b>eXp</b><i></i><span>Louisville, KY</span></span>
+    <span class="badge"><img src="img/exp-logo-white.png" alt="eXp Realty" style="height:16px;width:auto"><i></i><span>Louisville, KY</span></span>
     <h1><span data-i18n="hero.t1">Built by agents, for agents.</span><br class="bk"> <span class="grad" data-i18n="hero.t2">In Louisville.</span></h1>
     <p class="lead" data-i18n="hero.lead">A home base for eXp agents in Louisville: weekly training, rooms you can book, a mentor from day one, and a private app that keeps the whole office connected, in English and Spanish.</p>
     <div class="actions">
@@ -646,7 +648,7 @@ footer .legal{border-top-color:var(--light-line);color:#8A94A8}
 <footer>
   <div class="wrap">
     <div>
-      <a class="brand" href="#top" style="font-size:16px"><span class="logo">eXp<small>REALTY</small></span><span class="sep"></span><span data-i18n="brand">Culture Center</span></a>
+      <a class="brand" href="#top" style="font-size:16px"><img class="logo-img" src="img/exp-logo-white.png" alt="eXp Realty"><span class="sep"></span><span data-i18n="brand">Culture Center Louisville</span></a>
       <p style="margin-top:16px;max-width:30em" data-i18n="foot.tag">A community hub for eXp Realty agents in Louisville, KY. Training, community, and workspace — in English and Spanish.</p>
     </div>
     <div>
@@ -669,9 +671,8 @@ footer .legal{border-top-color:var(--light-line);color:#8A94A8}
       <h4 data-i18n="foot.contact">Contact</h4>
       <ul>
         <li><a href="https://maps.google.com/?q=8923+Stone+Green+Way+Suite+200+Louisville+KY" target="_blank" rel="noopener">8923 Stone Green Way, Suite 200<br>Louisville, KY</a></li>
-        <li><a href="mailto:fj.merlet@gmail.com">fj.merlet@gmail.com</a></li>
-        <li><a href="tel:+15027240048">(502) 724-0048</a></li>
-        <li><a href="https://www.micasalouisville.com" target="_blank" rel="noopener">micasalouisville.com</a></li>
+        <li><a href="mailto:expertcare@exprealty.com">expertcare@exprealty.com</a></li>
+        <li><a href="app/" data-i18n="foot.app">Open the member app</a></li>
       </ul>
     </div>
     <div class="legal">
@@ -687,7 +688,7 @@ footer .legal{border-top-color:var(--light-line);color:#8A94A8}
   document.querySelectorAll('[data-i18n]').forEach(function(el){ EN[el.getAttribute('data-i18n')] = el.innerHTML; });
 
   var ES = {
-    'brand':'Culture Center',
+    'brand':'Culture Center Louisville',
     'nav.features':'Qué incluye','nav.partners':'Aliados','nav.about':'Nosotros','nav.founder':'Líder','nav.involved':'Participa','nav.app':'Descarga la app',
     'hero.t1':'Hecho por agentes, para agentes.','hero.t2':'En Louisville.',
     'hero.lead':'Una casa para los agentes de eXp en Louisville: capacitación semanal, salas que puedes reservar, un mentor desde el primer día y una app privada que mantiene a toda la oficina conectada, en inglés y en español.',
@@ -746,7 +747,7 @@ footer .legal{border-top-color:var(--light-line);color:#8A94A8}
     'inv.s1t':'Envía tus datos','inv.s1p':'Toma menos de un minuto, solo lo básico para empezar.','inv.s2t':'Te contactamos','inv.s2p':'Alguien del Culture Center te escribe en un día, en inglés o en español.','inv.s3t':'Ven a conocerlo en persona','inv.s3p':'Recorre el espacio, conoce al equipo y siéntate en una capacitación.',
     'form.name':'Nombre','form.email':'Correo','form.phone':'Teléfono','form.opt':'(opcional)','form.lang':'Idioma preferido','form.role':'Soy','form.r1':'Agente de eXp en Louisville','form.r2':'Agente considerando eXp','form.r3':'Aliado de financiamiento, título o proveedor','form.r4':'Otra cosa','form.msg':'¿Qué te interesa?','form.submit':'Me interesa →','form.note':'Normalmente respondemos en un día hábil. Nada de spam, nunca.',
     'foot.tag':'Un centro comunitario para agentes de eXp Realty en Louisville, KY. Capacitación, comunidad y espacio de trabajo, en inglés y en español.',
-    'foot.site':'Sitio','foot.legalh':'Legal','foot.contact':'Contacto','foot.terms':'Términos de uso','foot.privacy':'Política de privacidad',
+    'foot.site':'Sitio','foot.legalh':'Legal','foot.contact':'Contacto','foot.app':'Abrir la app para miembros','foot.terms':'Términos de uso','foot.privacy':'Política de privacidad',
     'foot.legal':'© 2026 eXp Culture Center Louisville. Todos los derechos reservados. Operado de forma independiente por agentes de eXp Realty.'
   };
 
@@ -811,7 +812,7 @@ footer .legal{border-top-color:var(--light-line);color:#8A94A8}
       (es ? 'Soy: ' : 'I am: ') + roleText + '\n' +
       (es ? 'Idioma preferido: ' : 'Preferred language: ') + (f.lang.value === 'es' ? 'Español' : 'English') + '\n\n' +
       f.message.value.trim();
-    window.location.href = 'mailto:fj.merlet@gmail.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    window.location.href = 'mailto:francisco.merlet@exprealty.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
   });
 })();
 </script>

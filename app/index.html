@@ -178,14 +178,13 @@ input,select,textarea{font:inherit}
   <button class="btn btn-primary btn-block" id="a-send" style="margin-top:14px" data-i18n="auth.send">Send me a link</button>
   <p class="note" data-i18n="auth.note">Members of the Culture Center only. Not on the list yet? Ask Francisco or Andy to add you.</p>
   <div class="install" id="install-tip"><b data-i18n="auth.installb">Add to your home screen</b><span data-i18n="auth.installp">Tap Share, then "Add to Home Screen" so this opens like an app.</span></div>
-  <p class="note" style="margin-top:28px;text-align:center"><button id="a-demo" style="color:var(--blue);font-weight:600" data-i18n="auth.demo">Preview as Brenda (demo)</button></p>
+  <p class="note" id="a-msg" style="margin-top:16px;text-align:center"></p>
 </section>
 
 <!-- ===== HOME ===== -->
 <section class="screen" id="s-home">
   <div class="top"><div><h1><span data-i18n="home.hi">Welcome,</span> <span id="h-name">Brenda</span></h1><p class="sub" id="h-date"></p></div><div class="avatar" id="h-av">B</div></div>
-  <div class="banner" id="demo-banner" data-i18n="demo.banner">Preview with sample data. Nothing here is saved to the office yet.</div>
-  <div class="sec-h"><h2 data-i18n="home.next">Next up</h2><button data-go="events" data-i18n="home.all">All events</button></div>
+    <div class="sec-h"><h2 data-i18n="home.next">Next up</h2><button data-go="events" data-i18n="home.all">All events</button></div>
   <div id="h-next"></div>
   <div class="grid2">
     <button class="stat" data-go="spaces"><b id="h-open">3</b><span data-i18n="home.open">rooms open right now</span></button>
@@ -258,7 +257,7 @@ input,select,textarea{font:inherit}
     <div class="toggle"><div><b data-i18n="more.help">Need help?</b><small data-i18n="more.helps">Message Francisco or Andy in the app</small></div></div>
     <div class="toggle"><button id="signout" style="color:var(--red);font-weight:600" data-i18n="more.out">Sign out</button></div>
   </div></div>
-  <p class="note" style="text-align:center;margin-top:20px">Culture Center app · v0.1 preview</p>
+  <p class="note" style="text-align:center;margin-top:20px">Culture Center app · v1.0</p>
 </section>
 
 </div>
@@ -277,83 +276,69 @@ input,select,textarea{font:inherit}
 <div class="sheet" id="sheet" role="dialog" aria-modal="true"><div class="grab"></div><div id="sheet-body"></div></div>
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 /* ==========================================================================
-   DATA LAYER — sample data now; swap `store` for Supabase in Pass 1.
+   DATA LAYER — Supabase
    ========================================================================== */
-const SAMPLE = {
-  me: { id:'u-brenda', name:'Brenda', initials:'B', email:'brenda@exprealty.com', role:'admin', langs:['en','es'], areas:['Highlands','St. Matthews'], spec:['Buyers','First-time'] },
-  members: [
-    { id:'u-francisco', name:'Francisco Merlet', initials:'FM', email:'fj.merlet@gmail.com', phone:'(502) 724-0048', role:'admin', langs:['en','es'], areas:['Louisville','Jeffersontown'], spec:['Buyers','Sellers','Mentor'], title:'5X ICON · Certified Mentor' },
-    { id:'u-andy', name:'Andy Mitri', initials:'AM', email:'', phone:'', role:'admin', langs:['en'], areas:['Louisville'], spec:['Sellers'], title:'Admin' },
-    { id:'u-andrea', name:'Andrea Saavedra', initials:'AS', email:'', phone:'', role:'member', langs:['en','es'], areas:['South End','Okolona'], spec:['Buyers','First-time'], title:'Capped 2026' },
-    { id:'u-anthony', name:'Anthony Reddington', initials:'AR', email:'', phone:'', role:'member', langs:['en'], areas:['East End','Prospect'], spec:['Sellers','Luxury'], title:'ICON Agent' },
-    { id:'u-mary', name:'Mary Prince', initials:'MP', email:'', phone:'', role:'member', langs:['en'], areas:['Shelbyville','Middletown'], spec:['Buyers'], title:'New agent' },
-    { id:'u-liz', name:'Liz Benites', initials:'LB', email:'', phone:'', role:'member', langs:['en','es'], areas:['Fern Creek'], spec:['Buyers'], title:'New agent' },
-    { id:'u-brenda', name:'Brenda', initials:'B', email:'brenda@exprealty.com', phone:'', role:'admin', langs:['en','es'], areas:['Highlands','St. Matthews'], spec:['Buyers','First-time'], title:'Office' }
-  ],
-  rooms: [
-    { id:'conf', name:'Conference Room', name_es:'Sala de juntas', meta:'15 seats · TV · presentations', meta_es:'15 lugares · TV · presentaciones', ic:'b', sym:'◫', open:true },
-    { id:'meet', name:'Meeting Room', name_es:'Sala de reuniones', meta:'5 seats · smart screen', meta_es:'5 lugares · pantalla inteligente', ic:'v', sym:'▦', open:true },
-    { id:'studio', name:'Content Studio', name_es:'Estudio de contenido', meta:'Lights · mic · backdrop', meta_es:'Luces · micrófono · fondo', ic:'c', sym:'◉', open:false, soon:true },
-    { id:'desk', name:'Agent Workspace', name_es:'Espacio de agentes', meta:'2 desks · fast Wi-Fi · coffee', meta_es:'2 escritorios · Wi-Fi · café', ic:'g', sym:'▤', open:true },
-    { id:'common', name:'Common Space', name_es:'Área común', meta:'20 seats · events · waiting room', meta_es:'20 lugares · eventos · sala de espera', ic:'a', sym:'☕', open:true }
-  ],
-  events: [
-    { id:'e1', title:"Seller's Disclosure 101", title_es:"Seller's Disclosure 101", when:daysFrom(5,10), dur:90, where:'Conference Room', lang:'EN/ES', kind:'Training', kind_es:'Capacitación', going:12, desc:'How to read a disclosure line by line, what to flag for your client, and what to ask the listing agent. Bring a real one from a past deal.', desc_es:'Cómo leer una divulgación línea por línea, qué señalar para tu cliente y qué preguntarle al agente del listado. Trae una de un cierre pasado.' },
-    { id:'e2', title:'Objection Mastermind', title_es:'Mastermind de objeciones', when:daysFrom(6,18), dur:60, where:'Agent Workspace', lang:'EN', kind:'Mastermind', kind_es:'Mastermind', going:24, desc:'Bring the objection that stopped you this week. We workshop it as a group.', desc_es:'Trae la objeción que te frenó esta semana. La trabajamos en grupo.' },
-    { id:'e3', title:'Buyer Consult (ES)', title_es:'Consulta de comprador (ES)', when:daysFrom(7,12), dur:60, where:'Zoom', lang:'ES', kind:'Training', kind_es:'Capacitación', going:9, desc:'La consulta inicial con un comprador de primera vivienda, en español. Guion, documentos y las preguntas que más se repiten.', desc_es:'La consulta inicial con un comprador de primera vivienda, en español. Guion, documentos y las preguntas que más se repiten.' },
-    { id:'e4', title:'NAHREP Mixer', title_es:'Mixer de NAHREP', when:daysFrom(9,17.5), dur:120, where:'Common Space', lang:'EN/ES', kind:'Community', kind_es:'Comunidad', going:31, desc:'NAHREP Louisville monthly mixer, hosted at the Center. Partners welcome.', desc_es:'Mixer mensual de NAHREP Louisville, en el Center. Aliados bienvenidos.' },
-    { id:'e5', title:'Grow Global Weekly Mastermind', title_es:'Mastermind semanal de Grow Global', when:daysFrom(12,11), dur:60, where:'Zoom', lang:'EN', kind:'Mastermind', kind_es:'Mastermind', going:40, desc:'Weekly Grow Global session. Watch together in the Conference Room or join from Zoom.', desc_es:'Sesión semanal de Grow Global. Míralo con el grupo en la sala de juntas o entra por Zoom.' },
-    { id:'e0', title:'New Agent Orientation', title_es:'Orientación para agentes nuevos', when:daysFrom(-3,9), dur:120, where:'Conference Room', lang:'EN/ES', kind:'Training', kind_es:'Capacitación', going:6, desc:'Welcome session for new members.', desc_es:'Sesión de bienvenida para miembros nuevos.' }
-  ],
-  spotlights: [
-    { id:'s1', who:'Andrea Saavedra', what:'Just Capped! 🎉', what_es:'¡Acaba de hacer capping! 🎉', note:'Congratulate her in #louisville-wins', note_es:'Felicítala en #louisville-wins', big:true },
-    { id:'s2', who:'Anthony Reddington', what:'New ICON Agent', what_es:'Nuevo agente ICON', note:'Hit ICON status this month', note_es:'Logró el estatus ICON este mes', ic:'c', sym:'★' },
-    { id:'s3', who:'Mary Prince', what:'First Closing', what_es:'Primer cierre', note:'3 weeks after onboarding', note_es:'3 semanas después de empezar', ic:'b', sym:'🏠' },
-    { id:'s4', who:'Liz Benites', what:'New Agent', what_es:'Agente nueva', note:'Welcome to the office', note_es:'Bienvenida a la oficina', ic:'g', sym:'✓' }
-  ],
-  channels: [
-    { id:'general', name:'general', desc:'Culture Center announcements', desc_es:'Anuncios del Culture Center', ic:'b', unread:3 },
-    { id:'training-tips', name:'training-tips', desc:'Scripts, strategies, wins', desc_es:'Guiones, estrategias, logros', ic:'v', unread:0 },
-    { id:'en-espanol', name:'en-español', desc:'Todo en español, todos los días', desc_es:'Todo en español, todos los días', ic:'c', unread:12 },
-    { id:'louisville-wins', name:'louisville-wins', desc:'Closings, cappings, ICON', desc_es:'Cierres, cappings, ICON', ic:'g', unread:0 }
-  ],
-  dms: [
-    { id:'dm-francisco', with:'u-francisco', unread:0 },
-    { id:'dm-andrea', with:'u-andrea', unread:1 }
-  ],
-  messages: {
-    'general': [ { from:'u-francisco', text:'Reminder: Seller\'s Disclosure 101 is next week in the Conference Room. RSVP in Events so we set up enough chairs.', t:-40 }, { from:'u-andy', text:'Content Studio lights are in. Studio opens next month.', t:-25 } ],
-    'training-tips': [ { from:'u-anthony', text:'Script that worked twice this week for "we want to wait for rates": ask what rate would make them move, then show the payment difference on a real house.', t:-300 } ],
-    'en-espanol': [ { from:'u-andrea', text:'¿Alguien tiene un buen inspector para los Highlands esta semana?', t:-12 }, { from:'u-brenda', text:'Sí, te mando dos nombres ahora.', t:-10 } ],
-    'louisville-wins': [ { from:'u-francisco', text:'Andrea capped today. 🎉', t:-1440 } ],
-    'dm-francisco': [ { from:'u-francisco', text:'Can you book the Conference Room for Thursday 10–12?', t:-60 }, { from:'u-brenda', text:'Done.', t:-58 } ],
-    'dm-andrea': [ { from:'u-andrea', text:'Gracias por los nombres!', t:-9 } ]
-  },
-  bookings: [ { id:'b1', room:'meet', day:0, hour:10, by:'u-anthony' }, { id:'b2', room:'meet', day:0, hour:11, by:'u-anthony' }, { id:'b3', room:'conf', day:1, hour:14, by:'u-francisco' } ]
-};
-function daysFrom(d, h){ const x=new Date(); x.setHours(0,0,0,0); x.setDate(x.getDate()+d); x.setMinutes(h*60); return x.toISOString(); }
+const SUPABASE_URL = 'https://pnwkkjqnkvivadlqathg.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_1_w-T-dOjVaiwI6lo-j0YA_hwW7QU8J';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
 
-// Local persistence for the preview (RSVPs, bookings, messages you add). Replaced by Supabase later.
-const LS_KEY='ccl-preview-v1';
-let state = { lang:'en', signedIn:false, rsvps:{}, bookings:[], added:{events:[],spotlights:[],members:[]}, msgs:{}, notif:{book:true,event:true,msg:true,quiet:false} };
-try { const s=JSON.parse(localStorage.getItem(LS_KEY)||'null'); if (s) state={...state,...s}; } catch(e){}
-function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
+const LS_KEY='ccl-app-v1';
+let state = { lang:'en' };
+try { const s=JSON.parse(localStorage.getItem(LS_KEY)||'null'); if (s && s.lang) state.lang=s.lang; } catch(e){}
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({lang:state.lang})); }catch(e){} }
+
+// In-memory cache, refreshed from the database
+const db = { me:null, members:[], rooms:[], events:[], rsvps:[], bookings:[], spotlights:[], channels:[], msgs:{}, lastSeen:{} };
+try { db.lastSeen = JSON.parse(localStorage.getItem('ccl-seen')||'{}'); } catch(e){}
+function markSeen(id){ db.lastSeen[id]=new Date().toISOString(); try{ localStorage.setItem('ccl-seen', JSON.stringify(db.lastSeen)); }catch(e){} }
+
+async function q(promise, label){ const { data, error } = await promise; if (error){ console.error(label, error); throw error; } return data; }
+function dmKey(a,b){ return [a,b].sort().join(':'); }
+
+async function loadAll(){
+  const now = new Date(); const from = new Date(now); from.setDate(from.getDate()-1); const to = new Date(now); to.setDate(to.getDate()+14);
+  const [members, rooms, events, rsvps, bookings, spotlights, channels, recent] = await Promise.all([
+    q(sb.from('members').select('*').eq('active',true).order('full_name'),'members'),
+    q(sb.from('rooms').select('*').order('sort'),'rooms'),
+    q(sb.from('events').select('*').gte('starts_at', new Date(now.getTime()-90*864e5).toISOString()).order('starts_at'),'events'),
+    q(sb.from('rsvps').select('*'),'rsvps'),
+    q(sb.from('bookings').select('*').gte('starts_at', from.toISOString()).lte('starts_at', to.toISOString()),'bookings'),
+    q(sb.from('spotlights').select('*').order('created_at',{ascending:false}).limit(8),'spotlights'),
+    q(sb.from('channels').select('*').order('sort'),'channels'),
+    q(sb.from('messages').select('id,channel_id,dm_key,sender_id,body,created_at').order('created_at',{ascending:false}).limit(300),'messages')
+  ]);
+  Object.assign(db,{members,rooms,events,rsvps,bookings,spotlights,channels});
+  db.msgs={}; recent.reverse().forEach(m=>{ const k=m.channel_id||m.dm_key; (db.msgs[k]=db.msgs[k]||[]).push(m); });
+}
 
 const store = {
-  me(){ return SAMPLE.me; },
-  members(){ return [...SAMPLE.members, ...state.added.members]; },
-  member(id){ return this.members().find(m=>m.id===id); },
-  rooms(){ return SAMPLE.rooms; },
-  events(){ return [...SAMPLE.events, ...state.added.events].sort((a,b)=>a.when.localeCompare(b.when)); },
-  event(id){ return this.events().find(e=>e.id===id); },
-  spotlights(){ return [...state.added.spotlights, ...SAMPLE.spotlights]; },
-  channels(){ return SAMPLE.channels; },
-  dms(){ return SAMPLE.dms; },
-  messages(id){ return [...(SAMPLE.messages[id]||[]), ...(state.msgs[id]||[])]; },
-  bookings(){ return [...SAMPLE.bookings, ...state.bookings]; }
+  me(){ return db.me; },
+  members(){ return db.members; },
+  member(id){ return db.members.find(m=>m.id===id); },
+  rooms(){ return db.rooms; },
+  events(){ return db.events; },
+  event(id){ return db.events.find(e=>e.id===id); },
+  rsvpCount(id){ return db.rsvps.filter(r=>r.event_id===id).length; },
+  mine(id){ return db.rsvps.some(r=>r.event_id===id && r.member_id===db.me.id); },
+  spotlights(){ return db.spotlights; },
+  channels(){ return db.channels; },
+  dms(){ // every member I've exchanged messages with
+    const keys=Object.keys(db.msgs).filter(k=>k.includes(':')&&k.split(':').includes(db.me.id));
+    return keys.map(k=>({ id:k, with:k.split(':').find(x=>x!==db.me.id) }));
+  },
+  messages(id){ return db.msgs[id]||[]; },
+  unread(id){ const last=db.lastSeen[id]; return (db.msgs[id]||[]).filter(m=>m.sender_id!==db.me.id && (!last || m.created_at>last)).length; },
+  bookings(){ return db.bookings; }
 };
+
+// Adapters so the rendering code below can keep using simple shapes
+function normEvent(e){ return { ...e, when:e.starts_at, dur:e.duration_min, where:e.location||'', desc:e.description||'', desc_es:e.description_es, going:store.rsvpCount(e.id) }; }
+function normRoom(r){ return { ...r, ic:r.icon, sym:r.symbol, open:r.active, soon:!r.active }; }
+function normMember(m){ return { ...m, name:m.full_name, initials:initials(m.full_name), spec:m.specialties }; }
+function normSpot(s){ return { ...s, who:s.member_name }; }
 
 /* ==========================================================================
    I18N
@@ -417,19 +402,36 @@ $$('#tabs button').forEach(b=>b.addEventListener('click',()=>show(b.dataset.tab)
 document.addEventListener('click', e=>{ const g=e.target.closest('[data-go]'); if (g) show(g.dataset.go); });
 
 /* ==========================================================================
-   AUTH (demo) — Supabase magic link replaces this in Pass 1
+   AUTH — Supabase magic link
    ========================================================================== */
-function signIn(){ state.signedIn=true; save(); $('#s-auth').classList.remove('active'); $('#tabs').hidden=false; show('home'); }
-function signOut(){ state.signedIn=false; save(); $('#tabs').hidden=true; $$('.screen').forEach(s=>s.classList.remove('active')); $('#s-auth').classList.add('active'); }
-$('#a-send').addEventListener('click',()=>{ const v=$('#a-email').value.trim(); if(!v||!v.includes('@')){ $('#a-email').focus(); return; } toast(t('toast.link')); });
-$('#a-demo').addEventListener('click', signIn);
-$('#signout').addEventListener('click', signOut);
+function showAuth(msg){ $('#tabs').hidden=true; $$('.screen').forEach(x=>x.classList.remove('active')); $('#s-auth').classList.add('active'); $('#a-msg').textContent=msg||''; }
+async function enterApp(){
+  try { await loadAll(); } catch(e){ showAuth(state.lang==='es'?'No se pudo cargar. Revisa tu conexión.':'Could not load. Check your connection.'); return; }
+  $('#s-auth').classList.remove('active'); $('#tabs').hidden=false; show('home'); subscribeMessages();
+}
+async function resolveSession(session){
+  if (!session){ showAuth(); return; }
+  const { data, error } = await sb.from('members').select('*').eq('user_id', session.user.id).eq('active', true).maybeSingle();
+  if (error || !data){ await sb.auth.signOut(); showAuth(state.lang==='es'?'Este correo no está en la lista de miembros. Pídele a Francisco o a Andy que te agreguen.':'This email is not on the member list. Ask Francisco or Andy to add you.'); return; }
+  db.me = data; enterApp();
+}
+$('#a-send').addEventListener('click', async ()=>{
+  const email=$('#a-email').value.trim().toLowerCase(); if(!email||!email.includes('@')){ $('#a-email').focus(); return; }
+  $('#a-send').disabled=true;
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.origin + location.pathname, shouldCreateUser: true } });
+  $('#a-send').disabled=false;
+  if (error){ const notMember=/member list/i.test(error.message); $('#a-msg').textContent = notMember ? (state.lang==='es'?'Este correo no está en la lista de miembros. Pídele a Francisco o a Andy que te agreguen.':'This email is not on the member list. Ask Francisco or Andy to add you.') : error.message; return; }
+  $('#a-msg').textContent = state.lang==='es' ? 'Listo. Revisa tu correo y toca el enlace en este teléfono.' : 'Sent. Check your email and tap the link on this phone.';
+});
+$('#signout').addEventListener('click', async ()=>{ await sb.auth.signOut(); db.me=null; showAuth(); });
+sb.auth.onAuthStateChange((event, session)=>{ if (event==='SIGNED_IN' || event==='INITIAL_SESSION') resolveSession(session); if (event==='SIGNED_OUT') showAuth(); });
 
 /* ==========================================================================
    RENDER
    ========================================================================== */
-function renderAll(){ ['home','events','spaces','chat','directory','more'].forEach(render); }
+function renderAll(){ if(!db.me) return; ['home','events','spaces','chat','directory','more'].forEach(render); }
 function render(name){
+  if(!db.me) return;
   if (name==='home') renderHome();
   if (name==='events') renderEvents();
   if (name==='spaces') renderSpaces();
@@ -437,151 +439,195 @@ function render(name){
   if (name==='directory') renderDirectory();
   if (name==='more') renderMore();
 }
+function meN(){ return normMember(db.me); }
 
 function renderHome(){
-  const me=store.me();
-  $('#h-name').textContent=me.name; $('#h-av').textContent=me.initials;
+  const me=meN();
+  $('#h-name').textContent=me.name.split(' ')[0]; $('#h-av').textContent=me.initials;
   $('#h-date').textContent=new Date().toLocaleDateString(loc(),{weekday:'long',month:'long',day:'numeric'});
-  const next=store.events().filter(e=>new Date(e.when)>new Date()).slice(0,2);
+  const next=store.events().map(normEvent).filter(e=>new Date(e.when)>new Date()).slice(0,2);
   $('#h-next').innerHTML = next.map(eventRow).join('') || `<div class="empty">${t('ev.empty')}</div>`;
-  const now=new Date(); const openCount=store.rooms().filter(r=>r.open && !store.bookings().some(b=>b.room===r.id&&b.day===0&&b.hour===now.getHours())).length;
+  const now=new Date();
+  const openCount=store.rooms().map(normRoom).filter(r=>r.open && !store.bookings().some(b=>b.room_id===r.id && new Date(b.starts_at)<=now && new Date(b.ends_at)>now)).length;
   $('#h-open').textContent=openCount;
-  $('#h-unread').textContent=store.channels().reduce((n,c)=>n+c.unread,0)+store.dms().reduce((n,d)=>n+d.unread,0);
-  const sp=store.spotlights();
-  $('#h-spot').innerHTML = sp.map((s,i)=> (s.big||i===0)
-    ? `<div class="hero-card"><span class="eyebrow" style="color:#C9D2E0">${t('home.spot')}</span><b>${esc(s.who)}</b><small>${esc(L(s,'what'))} · ${esc(L(s,'note'))}</small></div>`
-    : `<div class="item"><div class="ic ${s.ic||'b'}">${s.sym||'★'}</div><div class="tx"><b>${esc(L(s,'what'))}</b><small>${esc(s.who)} · ${esc(L(s,'note'))}</small></div></div>`).join('');
+  $('#h-unread').textContent=store.channels().reduce((n,c)=>n+store.unread(c.id),0)+store.dms().reduce((n,d)=>n+store.unread(d.id),0);
+  const sp=store.spotlights().map(normSpot);
+  $('#h-spot').innerHTML = sp.map((s,i)=> i===0
+    ? `<div class="hero-card"><span class="eyebrow" style="color:#C9D2E0">${t('home.spot')}</span><b>${esc(s.who)}</b><small>${esc(L(s,'what'))}${L(s,'note')?' · '+esc(L(s,'note')):''}</small></div>`
+    : `<div class="item"><div class="ic ${['b','c','g','v'][i%4]}">★</div><div class="tx"><b>${esc(L(s,'what'))}</b><small>${esc(s.who)}${L(s,'note')?' · '+esc(L(s,'note')):''}</small></div></div>`).join('') || `<div class="empty">${t('ev.empty')}</div>`;
 }
 
 function eventRow(e){
-  const mine=!!state.rsvps[e.id];
-  return `<button class="item" data-ev="${e.id}"><div class="ic b">${dow(e.when)}</div><div class="tx"><b>${esc(L(e,'title'))}</b><small>${fmtDay(e.when)} · ${fmtTime(e.when)} · ${esc(e.where)} · ${e.lang}</small></div><span class="r"><span class="pill ${mine?'on':''}">${mine?t('ev.goingBtn'):(e.going+(state.rsvps[e.id]?1:0))+' '+t('ev.going')}</span></span></button>`;
+  const mine=store.mine(e.id);
+  return `<button class="item" data-ev="${e.id}"><div class="ic b">${dow(e.when)}</div><div class="tx"><b>${esc(L(e,'title'))}</b><small>${fmtDay(e.when)} · ${fmtTime(e.when)} · ${esc(e.where)} · ${e.lang||''}</small></div><span class="r"><span class="pill ${mine?'on':''}">${mine?t('ev.goingBtn'):e.going+' '+t('ev.going')}</span></span></button>`;
 }
 let evFilter='upcoming';
 function renderEvents(){
   const now=new Date();
-  let list=store.events();
+  let list=store.events().map(normEvent);
   if (evFilter==='upcoming') list=list.filter(e=>new Date(e.when)>=now);
   if (evFilter==='past') list=list.filter(e=>new Date(e.when)<now).reverse();
-  if (evFilter==='mine') list=list.filter(e=>state.rsvps[e.id]);
+  if (evFilter==='mine') list=list.filter(e=>store.mine(e.id));
   $('#ev-list').innerHTML = list.map(eventRow).join('') || `<div class="empty">${t('ev.empty')}</div>`;
   $('#ev-new').hidden=!isAdmin();
 }
 $$('#ev-seg button').forEach(b=>b.addEventListener('click',()=>{ $$('#ev-seg button').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); evFilter=b.dataset.f; renderEvents(); }));
 document.addEventListener('click', e=>{
   const b=e.target.closest('[data-ev]'); if(!b) return;
-  const ev=store.event(b.dataset.ev); const mine=!!state.rsvps[ev.id];
-  openSheet(`<span class="eyebrow coral">${esc(L(ev,'kind'))} · ${ev.lang}</span><h2 style="margin-top:8px">${esc(L(ev,'title'))}</h2>
+  const ev=normEvent(store.event(b.dataset.ev)); const mine=store.mine(ev.id);
+  openSheet(`<span class="eyebrow coral">${esc(L(ev,'kind')||'')} · ${ev.lang||''}</span><h2 style="margin-top:8px">${esc(L(ev,'title'))}</h2>
     <p class="meta">${fmtDay(ev.when)} · ${fmtTime(ev.when)} · ${ev.dur} min · ${esc(ev.where)}</p>
     <p class="body">${esc(L(ev,'desc'))}</p>
-    <p class="meta" style="margin-top:12px">${ev.going+(mine?1:0)} ${t('ev.going')}</p>
-    <div class="actions"><button class="btn ${mine?'btn-ghost':'btn-primary'}" id="rsvp">${mine?t('ev.cancel'):t('ev.rsvp')}</button><button class="btn btn-ghost" id="ics">${t('ev.cal')}</button></div>`);
-  $('#rsvp').onclick=()=>{ if(mine) delete state.rsvps[ev.id]; else state.rsvps[ev.id]=true; save(); closeSheet(); renderAll(); toast(mine?t('toast.unrsvp'):t('toast.rsvp')); };
-  $('#ics').onclick=()=>{ const s=new Date(ev.when), en=new Date(s.getTime()+ev.dur*60000); const f=d=>d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,''); const ics=`BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nDTSTART:${f(s)}\nDTEND:${f(en)}\nSUMMARY:${ev.title}\nLOCATION:${ev.where}\nDESCRIPTION:${ev.desc}\nEND:VEVENT\nEND:VCALENDAR`; const a=document.createElement('a'); a.href='data:text/calendar;charset=utf-8,'+encodeURIComponent(ics); a.download=ev.title.replace(/\W+/g,'-')+'.ics'; document.body.appendChild(a); a.click(); a.remove(); };
+    <p class="meta" style="margin-top:12px">${ev.going} ${t('ev.going')}</p>
+    <div class="actions"><button class="btn ${mine?'btn-ghost':'btn-primary'}" id="rsvp">${mine?t('ev.cancel'):t('ev.rsvp')}</button><button class="btn btn-ghost" id="ics">${t('ev.cal')}</button></div>
+    ${isAdmin()?`<p class="note" style="text-align:center"><button id="ev-del" style="color:var(--red);font-weight:600">${state.lang==='es'?'Eliminar evento':'Delete event'}</button></p>`:''}`);
+  $('#rsvp').onclick=async()=>{
+    try{ if(mine) await q(sb.from('rsvps').delete().match({event_id:ev.id,member_id:db.me.id}),'unrsvp'); else await q(sb.from('rsvps').insert({event_id:ev.id,member_id:db.me.id}),'rsvp'); }catch(e){ toast(e.message); return; }
+    db.rsvps = await q(sb.from('rsvps').select('*'),'rsvps'); closeSheet(); renderAll(); toast(mine?t('toast.unrsvp'):t('toast.rsvp'));
+  };
+  $('#ics').onclick=()=>{ const s=new Date(ev.when), en=new Date(s.getTime()+ev.dur*60000); const f=d=>d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,''); const ics=`BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nDTSTART:${f(s)}\nDTEND:${f(en)}\nSUMMARY:${ev.title}\nLOCATION:${ev.where}\nDESCRIPTION:${(ev.desc||'').replace(/\n/g,' ')}\nEND:VEVENT\nEND:VCALENDAR`; const a=document.createElement('a'); a.href='data:text/calendar;charset=utf-8,'+encodeURIComponent(ics); a.download=ev.title.replace(/\W+/g,'-')+'.ics'; document.body.appendChild(a); a.click(); a.remove(); };
+  const del=$('#ev-del'); if (del) del.onclick=async()=>{ if(!confirm(state.lang==='es'?'¿Eliminar este evento?':'Delete this event?')) return; await q(sb.from('events').delete().eq('id',ev.id),'del'); closeSheet(); await loadAll(); renderAll(); };
 });
 
 function roomStatus(r){
   if (r.soon) return `<span class="pill soon">${t('sp.soon')}</span>`;
-  const h=new Date().getHours(); const busy=store.bookings().some(b=>b.room===r.id&&b.day===0&&b.hour===h);
+  const now=new Date(); const busy=store.bookings().some(b=>b.room_id===r.id && new Date(b.starts_at)<=now && new Date(b.ends_at)>now);
   return `<span class="pill ${busy?'busy':'on'}">${busy?t('sp.busy'):t('sp.open')}</span>`;
 }
 function renderSpaces(){
-  $('#sp-list').innerHTML = store.rooms().map(r=>`<button class="item" data-room="${r.id}" ${r.soon?'disabled style="opacity:.6"':''}><div class="ic ${r.ic}">${r.sym}</div><div class="tx"><b>${esc(L(r,'name'))}</b><small>${esc(L(r,'meta'))}</small></div><span class="r">${roomStatus(r)}</span></button>`).join('');
-  const mine=store.bookings().filter(b=>b.by===store.me().id);
-  $('#sp-mine').innerHTML = mine.map(b=>{ const r=store.rooms().find(x=>x.id===b.room); const d=new Date(); d.setDate(d.getDate()+b.day); return `<div class="item"><div class="ic ${r.ic}">${r.sym}</div><div class="tx"><b>${esc(L(r,'name'))}</b><small>${d.toLocaleDateString(loc(),{weekday:'short',month:'short',day:'numeric'})} · ${hourLabel(b.hour)}</small></div><button class="btn btn-ghost btn-sm" data-release="${b.id}">${t('sp.release')}</button></div>`; }).join('') || `<div class="empty">${t('sp.none')}</div>`;
+  $('#sp-list').innerHTML = store.rooms().map(normRoom).map(r=>`<button class="item" data-room="${r.id}" ${r.soon?'disabled style="opacity:.6"':''}><div class="ic ${r.ic}">${r.sym}</div><div class="tx"><b>${esc(L(r,'name'))}</b><small>${esc(L(r,'meta')||'')}</small></div><span class="r">${roomStatus(r)}</span></button>`).join('');
+  const mine=store.bookings().filter(b=>b.member_id===db.me.id && new Date(b.ends_at)>new Date()).sort((a,b)=>a.starts_at.localeCompare(b.starts_at));
+  $('#sp-mine').innerHTML = mine.map(b=>{ const r=normRoom(store.rooms().find(x=>x.id===b.room_id)); return `<div class="item"><div class="ic ${r.ic}">${r.sym}</div><div class="tx"><b>${esc(L(r,'name'))}</b><small>${fmtDay(b.starts_at)} · ${fmtTime(b.starts_at)}–${fmtTime(b.ends_at)}</small></div><button class="btn btn-ghost btn-sm" data-release="${b.id}">${t('sp.release')}</button></div>`; }).join('') || `<div class="empty">${t('sp.none')}</div>`;
 }
 function hourLabel(h){ const d=new Date(); d.setHours(h,0,0,0); return d.toLocaleTimeString(loc(),{hour:'numeric'}); }
-document.addEventListener('click', e=>{
-  const rel=e.target.closest('[data-release]'); if (rel){ state.bookings=state.bookings.filter(b=>b.id!==rel.dataset.release); save(); renderAll(); toast(t('toast.released')); return; }
+document.addEventListener('click', async e=>{
+  const rel=e.target.closest('[data-release]'); if (rel){ try{ await q(sb.from('bookings').delete().eq('id',rel.dataset.release),'release'); }catch(err){ toast(err.message); return; } await loadAll(); renderAll(); toast(t('toast.released')); return; }
   const b=e.target.closest('[data-room]'); if(!b) return;
-  const r=store.rooms().find(x=>x.id===b.dataset.room); let day=0, picked=null;
+  const r=normRoom(store.rooms().find(x=>x.id===b.dataset.room)); let day=0, picked=null;
   const days=[0,1,2,3,4,5,6].map(i=>{ const d=new Date(); d.setDate(d.getDate()+i); return {i, dow:d.toLocaleDateString(loc(),{weekday:'short'}), n:d.getDate()}; });
+  function slotStart(h){ const d=new Date(); d.setDate(d.getDate()+day); d.setHours(h,0,0,0); return d; }
   function draw(){
     const hours=[8,9,10,11,12,13,14,15,16,17,18,19];
-    const taken=store.bookings().filter(x=>x.room===r.id&&x.day===day);
-    openSheet(`<span class="eyebrow">${esc(L(r,'meta'))}</span><h2 style="margin-top:8px">${esc(L(r,'name'))}</h2>
+    openSheet(`<span class="eyebrow">${esc(L(r,'meta')||'')}</span><h2 style="margin-top:8px">${esc(L(r,'name'))}</h2>
       <div class="days">${days.map(d=>`<button data-day="${d.i}" aria-pressed="${d.i===day}">${d.dow}<b>${d.n}</b></button>`).join('')}</div>
       <p class="meta" style="margin-top:12px">${t('sp.pick')}</p>
-      <div class="slots">${hours.map(h=>{ const tk=taken.find(x=>x.hour===h); const mine=tk&&tk.by===store.me().id; return `<button class="slot ${tk?(mine?'mine':'busy'):''}" data-h="${h}" aria-pressed="${picked===h}">${hourLabel(h)}</button>`; }).join('')}</div>
+      <div class="slots">${hours.map(h=>{ const s=slotStart(h), en=new Date(s.getTime()+36e5); const tk=store.bookings().find(x=>x.room_id===r.id && new Date(x.starts_at)<en && new Date(x.ends_at)>s); const mine=tk&&tk.member_id===db.me.id; const past=en<new Date(); return `<button class="slot ${tk?(mine?'mine':'busy'):(past?'busy':'')}" data-h="${h}" aria-pressed="${picked===h}">${hourLabel(h)}</button>`; }).join('')}</div>
       <div class="actions"><button class="btn btn-primary" id="book" ${picked==null?'disabled':''}>${t('sp.book')}</button></div>`);
     $$('[data-day]').forEach(x=>x.onclick=()=>{ day=+x.dataset.day; picked=null; draw(); });
     $$('.slot:not(.busy):not(.mine)').forEach(x=>x.onclick=()=>{ picked=+x.dataset.h; draw(); });
-    $('#book').onclick=()=>{ state.bookings.push({id:'b'+Date.now(), room:r.id, day, hour:picked, by:store.me().id}); save(); closeSheet(); renderAll(); toast(t('toast.booked')); };
+    $('#book').onclick=async()=>{ const s=slotStart(picked); const en=new Date(s.getTime()+36e5);
+      try{ await q(sb.from('bookings').insert({room_id:r.id, member_id:db.me.id, starts_at:s.toISOString(), ends_at:en.toISOString()}),'book'); }
+      catch(err){ toast(/exclusion|overlap|conflict/i.test(err.message)?(state.lang==='es'?'Ese horario ya está reservado.':'That time was just taken.'):err.message); await loadAll(); draw(); return; }
+      await loadAll(); closeSheet(); renderAll(); toast(t('toast.booked')); };
   }
   draw();
 });
 
-let chFilter='channels', openThread=null;
+let chFilter='channels', openThread=null, rt=null;
 function renderChat(){
-  if (chFilter==='channels') $('#ch-list').innerHTML = store.channels().map(c=>`<button class="item" data-thread="${c.id}"><div class="ic ${c.ic}">#</div><div class="tx"><b>${esc(c.name)}</b><small>${esc(L(c,'desc'))}</small></div>${c.unread?`<span class="r"><span class="pill blue">${c.unread}</span></span>`:''}</button>`).join('');
-  else $('#ch-list').innerHTML = store.dms().map(d=>{ const m=store.member(d.with); const last=store.messages(d.id).slice(-1)[0]; return `<button class="item" data-thread="${d.id}"><div class="avatar">${m.initials}</div><div class="tx"><b>${esc(m.name)}</b><small>${esc(last?last.text:'')}</small></div>${d.unread?`<span class="r"><span class="pill blue">${d.unread}</span></span>`:''}</button>`; }).join('');
+  if (chFilter==='channels') $('#ch-list').innerHTML = store.channels().map(c=>{ const u=store.unread(c.id); return `<button class="item" data-thread="${c.id}"><div class="ic ${c.icon||'b'}">#</div><div class="tx"><b>${esc(c.name)}</b><small>${esc(L(c,'description')||'')}</small></div>${u?`<span class="r"><span class="pill blue">${u}</span></span>`:''}</button>`; }).join('');
+  else $('#ch-list').innerHTML = store.dms().map(d=>{ const m=store.member(d.with); if(!m) return ''; const mm=normMember(m); const last=store.messages(d.id).slice(-1)[0]; const u=store.unread(d.id); return `<button class="item" data-thread="${d.id}"><div class="avatar">${mm.initials}</div><div class="tx"><b>${esc(mm.name)}</b><small>${esc(last?last.body:'')}</small></div>${u?`<span class="r"><span class="pill blue">${u}</span></span>`:''}</button>`; }).join('') || `<div class="empty">${state.lang==='es'?'Todavía no tienes mensajes directos. Abre el Directorio y toca a alguien.':'No direct messages yet. Open the Directory and tap someone.'}</div>`;
 }
 $$('#ch-seg button').forEach(b=>b.addEventListener('click',()=>{ $$('#ch-seg button').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); chFilter=b.dataset.f; renderChat(); }));
 document.addEventListener('click', e=>{ const b=e.target.closest('[data-thread]'); if (b) openThreadView(b.dataset.thread); });
 function openThreadView(id){
   openThread=id;
-  const ch=store.channels().find(c=>c.id===id); const dm=store.dms().find(d=>d.id===id);
-  $('#ch-name').textContent = ch ? '#'+ch.name : store.member(dm.with).name;
-  $('#ch-desc').textContent = ch ? L(ch,'desc') : (store.member(dm.with).title||'');
-  if (ch) ch.unread=0; if (dm) dm.unread=0;
+  const ch=store.channels().find(c=>c.id===id);
+  if (ch){ $('#ch-name').textContent='#'+ch.name; $('#ch-desc').textContent=L(ch,'description')||''; }
+  else { const other=store.member(id.split(':').find(x=>x!==db.me.id)); const m=other?normMember(other):{name:'',title:''}; $('#ch-name').textContent=m.name; $('#ch-desc').textContent=m.title||''; }
+  markSeen(id);
   $('#chat-list-view').hidden=true; $('#chat-thread-view').hidden=false;
   drawMsgs(); window.scrollTo(0, document.body.scrollHeight);
 }
 function drawMsgs(){
-  const me=store.me().id;
-  $('#ch-msgs').innerHTML = store.messages(openThread).map(m=>{ const who=store.member(m.from); const when=new Date(Date.now()+m.t*60000); return `<div class="msg ${m.from===me?'me':''}">${esc(m.text)}<small>${m.from===me?(state.lang==='es'?'Tú':'You'):esc(who?who.name:m.from)} · ${when.toLocaleTimeString(loc(),{hour:'numeric',minute:'2-digit'})}</small></div>`; }).join('');
+  const me=db.me.id;
+  $('#ch-msgs').innerHTML = store.messages(openThread).map(m=>{ const who=store.member(m.sender_id); return `<div class="msg ${m.sender_id===me?'me':''}">${esc(m.body)}<small>${m.sender_id===me?(state.lang==='es'?'Tú':'You'):esc(who?who.full_name:'')} · ${new Date(m.created_at).toLocaleTimeString(loc(),{hour:'numeric',minute:'2-digit'})}</small></div>`; }).join('') || `<div class="empty">${state.lang==='es'?'Sé el primero en escribir.':'Be the first to say something.'}</div>`;
 }
-$('#ch-back').addEventListener('click',()=>{ $('#chat-thread-view').hidden=true; $('#chat-list-view').hidden=false; renderChat(); renderHome(); });
-function sendMsg(){ const v=$('#ch-input').value.trim(); if(!v) return; (state.msgs[openThread]=state.msgs[openThread]||[]).push({from:store.me().id,text:v,t:0}); save(); $('#ch-input').value=''; drawMsgs(); window.scrollTo(0,document.body.scrollHeight); }
+$('#ch-back').addEventListener('click',()=>{ openThread=null; $('#chat-thread-view').hidden=true; $('#chat-list-view').hidden=false; renderChat(); renderHome(); });
+async function sendMsg(){
+  const v=$('#ch-input').value.trim(); if(!v||!openThread) return;
+  const row = openThread.includes(':') ? { dm_key:openThread, sender_id:db.me.id, body:v } : { channel_id:openThread, sender_id:db.me.id, body:v };
+  $('#ch-input').value='';
+  try{ const inserted=await q(sb.from('messages').insert(row).select().single(),'send'); (db.msgs[openThread]=db.msgs[openThread]||[]).push(inserted); markSeen(openThread); drawMsgs(); window.scrollTo(0,document.body.scrollHeight); }
+  catch(err){ toast(err.message); $('#ch-input').value=v; }
+}
 $('#ch-send').addEventListener('click', sendMsg); $('#ch-input').addEventListener('keydown',e=>{ if(e.key==='Enter') sendMsg(); });
-$('#ch-new').addEventListener('click',()=>{ chFilter='dm'; $$('#ch-seg button').forEach(x=>x.setAttribute('aria-pressed', String(x.dataset.f==='dm'))); show('directory'); toast(state.lang==='es'?'Elige a quién escribirle':'Pick who to message'); });
+$('#ch-new').addEventListener('click',()=>{ show('directory'); toast(state.lang==='es'?'Elige a quién escribirle':'Pick who to message'); });
+function subscribeMessages(){
+  if (rt) sb.removeChannel(rt);
+  rt = sb.channel('messages-live').on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},(payload)=>{
+    const m=payload.new; const k=m.channel_id||m.dm_key; if(!k) return;
+    if (k.includes(':') && !k.split(':').includes(db.me.id)) return;
+    const list=(db.msgs[k]=db.msgs[k]||[]); if (list.some(x=>x.id===m.id)) return; list.push(m);
+    if (openThread===k){ markSeen(k); drawMsgs(); window.scrollTo(0,document.body.scrollHeight); }
+    else if (current==='chat') renderChat();
+    if (current==='home') renderHome();
+  }).subscribe();
+}
 
 function renderDirectory(){
-  const q=($('#dir-q').value||'').toLowerCase();
-  const list=store.members().filter(m=>m.id!==store.me().id).filter(m=>!q || [m.name,...(m.areas||[]),...(m.spec||[]),...(m.langs||[]).map(l=>l==='es'?'español spanish':'english')].join(' ').toLowerCase().includes(q));
+  const qv=($('#dir-q').value||'').toLowerCase();
+  const list=store.members().map(normMember).filter(m=>m.id!==db.me.id).filter(m=>!qv || [m.name,m.title||'',...(m.areas||[]),...(m.spec||[]),...(m.langs||[]).map(l=>l==='es'?'español spanish':'english')].join(' ').toLowerCase().includes(qv));
   $('#dir-count').textContent=`${store.members().length} ${t('dir.members')}`;
-  $('#dir-list').innerHTML = list.map(m=>`<button class="item" data-member="${m.id}"><div class="avatar">${m.initials}</div><div class="tx"><b>${esc(m.name)}</b><small>${esc(m.title||'')}${m.areas?' · '+esc(m.areas.join(', ')):''}</small></div><span class="r">${(m.langs||[]).map(l=>l.toUpperCase()).join(' · ')}</span></button>`).join('') || `<div class="empty">${t('ev.empty')}</div>`;
+  $('#dir-list').innerHTML = list.map(m=>`<button class="item" data-member="${m.id}"><div class="avatar">${m.initials}</div><div class="tx"><b>${esc(m.name)}</b><small>${esc(m.title||'')}${m.areas&&m.areas.length?' · '+esc(m.areas.join(', ')):''}</small></div><span class="r">${(m.langs||[]).map(l=>l.toUpperCase()).join(' · ')}</span></button>`).join('') || `<div class="empty">${t('ev.empty')}</div>`;
 }
 $('#dir-q').addEventListener('input', renderDirectory);
 document.addEventListener('click', e=>{
-  const b=e.target.closest('[data-member]'); if(!b) return; const m=store.member(b.dataset.member);
+  const b=e.target.closest('[data-member]'); if(!b) return; const m=normMember(store.member(b.dataset.member));
   openSheet(`<div style="display:flex;gap:14px;align-items:center"><div class="avatar lg">${m.initials}</div><div><h2>${esc(m.name)}</h2><p class="meta">${esc(m.title||'')}</p></div></div>
     <div class="chips" style="margin-top:14px">${(m.langs||[]).map(l=>`<span>${l==='es'?'Español':'English'}</span>`).join('')}${(m.areas||[]).map(a=>`<span>${esc(a)}</span>`).join('')}${(m.spec||[]).map(a=>`<span>${esc(a)}</span>`).join('')}</div>
-    <div class="actions">${m.phone?`<a class="btn btn-ghost" href="tel:${m.phone.replace(/\D/g,'')}">${t('dir.call')}</a><a class="btn btn-ghost" href="sms:${m.phone.replace(/\D/g,'')}">${t('dir.text')}</a>`:''}${m.email?`<a class="btn btn-ghost" href="mailto:${m.email}">${t('dir.email')}</a>`:''}<button class="btn btn-primary" id="dm-go">${t('dir.dm')}</button></div>`);
-  $('#dm-go').onclick=()=>{ closeSheet(); let dm=store.dms().find(d=>d.with===m.id); if(!dm){ dm={id:'dm-'+m.id,with:m.id,unread:0}; SAMPLE.dms.push(dm); } show('chat'); chFilter='dm'; openThreadView(dm.id); };
+    <div class="actions">${m.phone?`<a class="btn btn-ghost" href="tel:${m.phone.replace(/\D/g,'')}">${t('dir.call')}</a><a class="btn btn-ghost" href="sms:${m.phone.replace(/\D/g,'')}">${t('dir.text')}</a>`:''}${m.email?`<a class="btn btn-ghost" href="mailto:${m.email}">${t('dir.email')}</a>`:''}<button class="btn btn-primary" id="dm-go">${t('dir.dm')}</button></div>
+    ${isAdmin()?`<p class="note" style="text-align:center;margin-top:16px"><button id="mb-edit" style="color:var(--blue);font-weight:600">${state.lang==='es'?'Editar miembro':'Edit member'}</button> · <button id="mb-rm" style="color:var(--red);font-weight:600">${state.lang==='es'?'Quitar acceso':'Remove access'}</button></p>`:''}`);
+  $('#dm-go').onclick=()=>{ closeSheet(); chFilter='dm'; $$('#ch-seg button').forEach(x=>x.setAttribute('aria-pressed', String(x.dataset.f==='dm'))); show('chat'); openThreadView(dmKey(db.me.id,m.id)); };
+  const ed=$('#mb-edit'); if(ed) ed.onclick=()=>adminForm('member', m);
+  const rm=$('#mb-rm'); if(rm) rm.onclick=async()=>{ if(!confirm((state.lang==='es'?'¿Quitar acceso a ':'Remove access for ')+m.name+'?')) return; await q(sb.from('members').update({active:false}).eq('id',m.id),'rm'); closeSheet(); await loadAll(); renderAll(); };
 });
 
 function renderMore(){
-  const me=store.me(); $('#m-name').textContent=me.name; $('#m-av').textContent=me.initials; $('#m-email').textContent=me.email;
-  $('#m-chips').innerHTML=(me.langs||[]).map(l=>`<span>${l==='es'?'Español':'English'}</span>`).join('')+(me.spec||[]).map(s=>`<span>${esc(s)}</span>`).join('');
+  const me=meN(); $('#m-name').textContent=me.name; $('#m-av').textContent=me.initials; $('#m-email').textContent=me.email;
+  $('#m-chips').innerHTML=(me.langs||[]).map(l=>`<span>${l==='es'?'Español':'English'}</span>`).join('')+(me.spec||[]).map(s=>`<span>${esc(s)}</span>`).join('')+`<span style="color:var(--blue);cursor:pointer" id="edit-me">${state.lang==='es'?'Editar perfil':'Edit profile'}</span>`;
+  $('#edit-me').onclick=()=>adminForm('member', me, true);
   $('#admin-sec').hidden=!isAdmin();
-  $$('.sw').forEach(s=>s.setAttribute('aria-checked', String(!!state.notif[s.dataset.n])));
+  const prefs=db.me.prefs||{};
+  $$('.sw').forEach(s=>s.setAttribute('aria-checked', String(!!prefs[s.dataset.n])));
 }
-$$('.sw').forEach(s=>s.addEventListener('click',()=>{ state.notif[s.dataset.n]=!state.notif[s.dataset.n]; save(); renderMore(); }));
+$$('.sw').forEach(s=>s.addEventListener('click', async ()=>{ const prefs={...(db.me.prefs||{})}; prefs[s.dataset.n]=!prefs[s.dataset.n]; db.me.prefs=prefs; renderMore(); await sb.from('members').update({prefs}).eq('id',db.me.id); }));
 $$('#lang button').forEach(b=>b.addEventListener('click',()=>{ state.lang=b.dataset.lang; save(); applyLang(); }));
 
-/* admin forms (demo: saved locally) */
-function adminForm(kind){
+/* admin forms — write straight to the database */
+function adminForm(kind, m, self){
   if (kind==='event') openSheet(`<h2>${t('adm.evTitle')}</h2>
     <div class="field"><label>${t('f.title')}</label><input id="f-title"></div>
-    <div class="row"><div class="field"><label>${t('f.when')}</label><input id="f-when" type="datetime-local"></div><div class="field"><label>${t('f.lang')}</label><select id="f-lang"><option>EN</option><option>ES</option><option>EN/ES</option></select></div></div>
-    <div class="field"><label>${t('f.where')}</label><select id="f-where">${store.rooms().map(r=>`<option>${r.name}</option>`).join('')}<option>Zoom</option></select></div>
+    <div class="row"><div class="field"><label>${t('f.when')}</label><input id="f-when" type="datetime-local"></div><div class="field"><label>${state.lang==='es'?'Duración (min)':'Length (min)'}</label><input id="f-dur" type="number" value="60" min="15" step="15"></div></div>
+    <div class="row"><div class="field"><label>${t('f.where')}</label><select id="f-where">${store.rooms().map(r=>`<option>${esc(r.name)}</option>`).join('')}<option>Zoom</option></select></div><div class="field"><label>${t('f.lang')}</label><select id="f-lang"><option>EN</option><option>ES</option><option>EN/ES</option></select></div></div>
+    <div class="field"><label>${state.lang==='es'?'Tipo':'Type'}</label><select id="f-kind"><option>Training</option><option>Mastermind</option><option>Community</option><option>Event</option></select></div>
     <div class="field"><label>${t('f.desc')}</label><textarea id="f-desc"></textarea></div>
     <div class="actions"><button class="btn btn-primary" id="f-save">${t('adm.save')}</button></div>`);
   if (kind==='spot') openSheet(`<h2>${t('adm.spTitle')}</h2>
-    <div class="field"><label>${t('f.who')}</label><select id="f-who">${store.members().map(m=>`<option>${esc(m.name)}</option>`).join('')}</select></div>
+    <div class="field"><label>${t('f.who')}</label><input id="f-who" list="mlist"><datalist id="mlist">${store.members().map(x=>`<option value="${esc(x.full_name)}">`).join('')}</datalist></div>
     <div class="field"><label>${t('f.what')}</label><select id="f-what"><option>Just Capped! 🎉</option><option>New ICON Agent</option><option>First Closing</option><option>New Agent</option><option>New Designation</option></select></div>
     <div class="field"><label>${t('f.note')}</label><input id="f-note"></div>
     <div class="actions"><button class="btn btn-coral" id="f-save">${t('adm.save')}</button></div>`);
-  if (kind==='member') openSheet(`<h2>${t('adm.mbTitle')}</h2>
-    <div class="field"><label>${t('f.name')}</label><input id="f-name"></div>
-    <div class="field"><label>${t('f.email')}</label><input id="f-email" type="email" placeholder="name@exprealty.com"></div>
-    <div class="actions"><button class="btn btn-primary" id="f-save">${t('adm.save')}</button></div>`);
-  $('#f-save').onclick=()=>{
-    if (kind==='event'){ const title=$('#f-title').value.trim(), when=$('#f-when').value; if(!title||!when){ return; } state.added.events.push({id:'e'+Date.now(), title, when:new Date(when).toISOString(), dur:60, where:$('#f-where').value, lang:$('#f-lang').value, kind:'Event', going:0, desc:$('#f-desc').value}); }
-    if (kind==='spot'){ state.added.spotlights.unshift({id:'s'+Date.now(), who:$('#f-who').value, what:$('#f-what').value, note:$('#f-note').value, big:true}); }
-    if (kind==='member'){ const name=$('#f-name').value.trim(); if(!name) return; state.added.members.push({id:'u'+Date.now(), name, initials:initials(name), email:$('#f-email').value.trim(), role:'member', langs:['en'], areas:[], spec:[], title:'New member'}); }
-    save(); closeSheet(); renderAll(); toast(kind==='member'?t('f.added'):t('f.saved'));
+  if (kind==='member') openSheet(`<h2>${m?(self?(state.lang==='es'?'Tu perfil':'Your profile'):(state.lang==='es'?'Editar miembro':'Edit member')):t('adm.mbTitle')}</h2>
+    <div class="field"><label>${t('f.name')}</label><input id="f-name" value="${m?esc(m.full_name):''}"></div>
+    <div class="field"><label>${t('f.email')}</label><input id="f-email" type="email" placeholder="name@exprealty.com" value="${m?esc(m.email):''}" ${self?'disabled':''}></div>
+    <div class="row"><div class="field"><label>${state.lang==='es'?'Teléfono':'Phone'}</label><input id="f-phone" value="${m&&m.phone?esc(m.phone):''}"></div><div class="field"><label>${state.lang==='es'?'Título':'Title'}</label><input id="f-tt" value="${m&&m.title?esc(m.title):''}" placeholder="ICON Agent, New agent…"></div></div>
+    <div class="row"><div class="field"><label>${state.lang==='es'?'Idiomas':'Languages'}</label><select id="f-langs"><option value="en" ${m&&!(m.langs||[]).includes('es')?'selected':''}>English</option><option value="en,es" ${m&&(m.langs||[]).includes('es')?'selected':''}>English + Español</option></select></div>${!self?`<div class="field"><label>${state.lang==='es'?'Rol':'Role'}</label><select id="f-role"><option value="member" ${m&&m.role==='member'?'selected':''}>Member</option><option value="admin" ${m&&m.role==='admin'?'selected':''}>Admin</option></select></div>`:''}</div>
+    <div class="field"><label>${state.lang==='es'?'Zonas (separadas por coma)':'Neighborhoods (comma separated)'}</label><input id="f-areas" value="${m?esc((m.areas||[]).join(', ')):''}"></div>
+    <div class="field"><label>${state.lang==='es'?'Especialidades (separadas por coma)':'Specialties (comma separated)'}</label><input id="f-spec" value="${m?esc((m.specialties||[]).join(', ')):''}"></div>
+    <div class="actions"><button class="btn btn-primary" id="f-save">${m?(state.lang==='es'?'Guardar':'Save'):t('adm.save')}</button></div>`);
+  $('#f-save').onclick=async()=>{
+    try{
+      if (kind==='event'){ const title=$('#f-title').value.trim(), when=$('#f-when').value; if(!title||!when) return; await q(sb.from('events').insert({title, starts_at:new Date(when).toISOString(), duration_min:+$('#f-dur').value||60, location:$('#f-where').value, lang:$('#f-lang').value, kind:$('#f-kind').value, description:$('#f-desc').value, created_by:db.me.id}),'event'); }
+      if (kind==='spot'){ const who=$('#f-who').value.trim(); if(!who) return; await q(sb.from('spotlights').insert({member_name:who, what:$('#f-what').value, note:$('#f-note').value, created_by:db.me.id}),'spot'); }
+      if (kind==='member'){ const name=$('#f-name').value.trim(), email=$('#f-email').value.trim().toLowerCase(); if(!name||(!self&&!email)) return;
+        const split=v=>v.split(',').map(x=>x.trim()).filter(Boolean);
+        const row={ full_name:name, phone:$('#f-phone').value.trim()||null, title:$('#f-tt').value.trim()||null, langs:$('#f-langs').value.split(','), areas:split($('#f-areas').value), specialties:split($('#f-spec').value) };
+        if (!self){ row.email=email; row.role=$('#f-role').value; }
+        if (m) await q(sb.from('members').update(row).eq('id',m.id),'member'); else await q(sb.from('members').insert(row),'member');
+        if (self){ Object.assign(db.me,row); } }
+    }catch(err){ toast(/duplicate|unique/i.test(err.message)?(state.lang==='es'?'Ese correo ya está en la lista.':'That email is already on the list.'):err.message); return; }
+    closeSheet(); await loadAll(); if (self){ const fresh=await sb.from('members').select('*').eq('id',db.me.id).single(); if(fresh.data) db.me=fresh.data; } renderAll(); toast(kind==='member'?(m?(state.lang==='es'?'Guardado':'Saved'):t('f.added')):t('f.saved'));
   };
 }
 $$('[data-adm]').forEach(b=>b.addEventListener('click',()=>adminForm(b.dataset.adm)));
@@ -591,8 +637,7 @@ $('#ev-new').addEventListener('click',()=>adminForm('event'));
    BOOT
    ========================================================================== */
 applyLang();
-if (state.signedIn) signIn(); else { $('#s-auth').classList.add('active'); }
-// install hint on iOS Safari (not yet installed)
+showAuth();
 const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
 if (!standalone && /iphone|ipad/i.test(navigator.userAgent)) $('#install-tip').style.display='block';
 if ('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
