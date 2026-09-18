@@ -106,7 +106,7 @@ td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}td.nw{
     <section class="page" id="p-members">
       <div class="top"><div><h1>Members</h1><p id="mb-count"></p></div><div style="display:flex;gap:10px"><button class="btn" id="mb-csv">⬇ Export CSV</button><button class="btn p" id="mb-new">+ Add member</button></div></div>
       <div class="tools"><input id="mb-q" placeholder="Search name, email, phone"><div class="seg" id="mb-seg"><button aria-pressed="true" data-f="active">Active</button><button data-f="admins">Admins</button><button data-f="inactive">Removed</button></div></div>
-      <div class="card tbl"><table><thead><tr><th>Name</th><th>Email · phone</th><th>Role</th><th>Languages</th><th>Attended</th><th>Joined</th><th></th></tr></thead><tbody id="mb-list"></tbody></table></div>
+      <div class="card tbl"><table><thead><tr><th>Name</th><th>Email · phone</th><th>Role</th><th>Languages</th><th>Attended</th><th>Onboarding</th><th>Joined</th><th></th></tr></thead><tbody id="mb-list"></tbody></table></div>
     </section>
 
     <!-- EVENTS -->
@@ -177,10 +177,10 @@ function closeModal(){ $('#modal').classList.remove('open'); }
 $('#modal').addEventListener('click',e=>{ if(e.target.id==='modal') closeModal(); });
 function csv(name, rows){ const lines=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'})); a.download=name; a.click(); }
 
-const db={me:null,inquiries:[],members:[],events:[],rsvps:[],checkins:[],bookings:[],rooms:[],anns:[],annReads:[],partners:[],resources:[],spots:[],codes:[]};
+const db={me:null,obSteps:[],obProg:[],inquiries:[],members:[],events:[],rsvps:[],checkins:[],bookings:[],rooms:[],anns:[],annReads:[],partners:[],resources:[],spots:[],codes:[]};
 async function loadAll(){
   const now=new Date(), from=new Date(now.getTime()-120*864e5).toISOString(), to=new Date(now.getTime()+60*864e5).toISOString();
-  const [members,events,rsvps,checkins,bookings,rooms,anns,annReads,partners,resources,spots,codes,inquiries]=await Promise.all([
+  const [members,events,rsvps,checkins,bookings,rooms,anns,annReads,partners,resources,spots,codes,inquiries,obSteps,obProg]=await Promise.all([
     q(sb.from('members').select('*').order('full_name'),'members'),
     q(sb.from('events').select('*').gte('starts_at',from).order('starts_at'),'events'),
     q(sb.from('rsvps').select('*'),'rsvps'),
@@ -194,8 +194,10 @@ async function loadAll(){
     sb.from('spotlights').select('*').order('created_at',{ascending:false}).limit(20).then(r=>r.data||[]),
     sb.from('event_codes').select('*').then(r=>r.data||[]),
     sb.from('inquiries').select('*').order('created_at',{ascending:false}).limit(300).then(r=>r.data||[]),
+    sb.from('onboarding_steps').select('*').eq('active',true).order('sort').then(r=>r.data||[]),
+    sb.from('onboarding_progress').select('*').then(r=>r.data||[]),
   ]);
-  Object.assign(db,{members,events,rsvps,checkins,bookings,rooms,anns,annReads,partners,resources,spots,codes,inquiries});
+  Object.assign(db,{members,events,rsvps,checkins,bookings,rooms,anns,annReads,partners,resources,spots,codes,inquiries,obSteps,obProg});
 }
 const active=()=>db.members.filter(m=>m.active);
 const roomName=id=>(db.rooms.find(r=>r.id===id)||{}).name||id;
@@ -254,7 +256,7 @@ function renderOverview(){
   $('#ch-ann').innerHTML=bars(db.anns.slice(0,6).map(a=>{ const n=db.annReads.filter(r=>r.announcement_id===a.id).length; return {l:a.title,v:n,t:`${n} / ${active().length}`}; }),'var(--coral)');
   const months=[...Array(6)].map((_,i)=>{ const d=new Date(now.getFullYear(),now.getMonth()-5+i,1); return {l:d.toLocaleDateString('en-US',{month:'short',year:'2-digit'}),v:db.members.filter(m=>{ const c=new Date(m.created_at); return c.getFullYear()===d.getFullYear()&&c.getMonth()===d.getMonth(); }).length}; });
   $('#ch-join').innerHTML=bars(months);
-  const attn=[]; const nInq=db.inquiries.filter(i=>i.status==='new').length; if(nInq) attn.push(`${nInq} new inquiry(ies) from the website waiting for a reply.`);
+  const attn=[]; const stuck=active().filter(m=>m.onboarding&&m.onboarding_started_at&&(Date.now()-new Date(m.onboarding_started_at))>14*864e5&&obProgress(m).pct<50); if(stuck.length) attn.push(`Onboarding: ${stuck.map(m=>m.full_name.split(' ')[0]).join(', ')} ${stuck.length>1?'are':'is'} under 50% after two weeks — worth a call.`); const nInq=db.inquiries.filter(i=>i.status==='new').length; if(nInq) attn.push(`${nInq} new inquiry(ies) from the website waiting for a reply.`);
   const noCode=upcoming.filter(e=>!db.codes.some(c=>c.event_id===e.id)); if(noCode.length) attn.push(`${noCode.length} upcoming event(s) have no check-in code (run the check-in SQL).`);
   const unreadPinned=db.anns.filter(a=>a.pinned).map(a=>({a,n:active().length-db.annReads.filter(r=>r.announcement_id===a.id).length})).filter(x=>x.n>0); unreadPinned.forEach(x=>attn.push(`"${x.a.title}" — ${x.n} member(s) haven't read it.`));
   const noShow=active().filter(m=>!db.checkins.some(c=>c.member_id===m.id)&&new Date(m.created_at)<new Date(now.getTime()-30*864e5)); if(noShow.length) attn.push(`${noShow.length} member(s) joined 30+ days ago and haven't checked in to any event yet.`);
@@ -277,6 +279,9 @@ document.addEventListener('click',async e=>{
   const d=e.target.closest('[data-inq-del]'); if(d){ if(!confirm('Delete this inquiry?')) return; await q(sb.from('inquiries').delete().eq('id',d.dataset.inqDel),'inq'); await loadAll(); renderAll(); }
 });
 
+/* ---------- onboarding helpers ---------- */
+function obProgress(m){ const total=db.obSteps.length||1; const done=db.obSteps.filter(st=>db.obProg.some(p=>p.member_id===m.id&&p.step_id===st.id)).length; return {done,total,pct:Math.round(done/total*100)}; }
+function obCell(m){ if(!m.onboarding) return '<span style="color:var(--dim)">—</span>'; const p=obProgress(m); const days=m.onboarding_started_at?Math.floor((Date.now()-new Date(m.onboarding_started_at))/864e5):null; return `<div class="bar" style="margin:0;min-width:150px"><span class="tr"><i style="width:${p.pct}%;background:${p.pct===100?'var(--green)':p.pct>=50?'var(--blue)':'var(--amber)'}"></i></span><span class="v">${p.done}/${p.total}</span></div>${days!==null?`<span class="sub">day ${days}${m.mentor_id?' · mentor: '+esc(memberName(m.mentor_id).split(' ')[0]):''}</span>`:''}`; }
 /* ---------- members ---------- */
 let mbF='active';
 function renderMembers(){
@@ -284,7 +289,7 @@ function renderMembers(){
   let list=db.members.filter(m=>mbF==='inactive'?!m.active:m.active); if(mbF==='admins') list=list.filter(m=>m.role==='admin');
   list=list.filter(m=>!qv||[m.full_name,m.email,m.phone||''].join(' ').toLowerCase().includes(qv));
   $('#mb-count').textContent=`${active().length} active · ${db.members.filter(m=>m.role==='admin'&&m.active).length} admins`;
-  $('#mb-list').innerHTML=list.map(m=>`<tr class="row"><td><b>${esc(m.full_name)}</b>${m.title?`<span class="sub">${esc(m.title)}</span>`:''}</td><td>${esc(m.email)}<span class="sub">${esc(m.phone||'')}</span></td><td class="nw">${m.role==='admin'?'<span class="pill blue">Admin</span>':'<span class="pill">Member</span>'}${m.user_id?'':' <span class="pill amber" title="Has not signed in yet">Not signed in</span>'}</td><td class="nw">${(m.langs||[]).map(l=>l.toUpperCase()).join(' · ')}</td><td>${db.checkins.filter(c=>c.member_id===m.id).length}</td><td>${new Date(m.created_at).toLocaleDateString()}</td><td style="text-align:right;white-space:nowrap"><button class="btn sm" data-mb-edit="${m.id}">Edit</button> ${m.active?`<button class="btn sm d" data-mb-rm="${m.id}">Remove</button>`:`<button class="btn sm" data-mb-restore="${m.id}">Restore</button>`}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">No one here.</td></tr>';
+  $('#mb-list').innerHTML=list.map(m=>`<tr class="row"><td><b>${esc(m.full_name)}</b>${m.title?`<span class="sub">${esc(m.title)}</span>`:''}</td><td>${esc(m.email)}<span class="sub">${esc(m.phone||'')}</span></td><td class="nw">${m.role==='admin'?'<span class="pill blue">Admin</span>':'<span class="pill">Member</span>'}${m.user_id?'':' <span class="pill amber" title="Has not signed in yet">Not signed in</span>'}</td><td class="nw">${(m.langs||[]).map(l=>l.toUpperCase()).join(' · ')}</td><td>${db.checkins.filter(c=>c.member_id===m.id).length}</td><td class="nw">${obCell(m)}</td><td>${new Date(m.created_at).toLocaleDateString()}</td><td style="text-align:right;white-space:nowrap"><button class="btn sm" data-mb-edit="${m.id}">Edit</button> ${m.active?`<button class="btn sm d" data-mb-rm="${m.id}">Remove</button>`:`<button class="btn sm" data-mb-restore="${m.id}">Restore</button>`}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">No one here.</td></tr>';
 }
 $('#mb-q').addEventListener('input',renderMembers);
 $$('#mb-seg button').forEach(b=>b.onclick=()=>{ $$('#mb-seg button').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); mbF=b.dataset.f; renderMembers(); });
@@ -296,8 +301,11 @@ function memberForm(m){ const v=k=>esc(m&&m[k]||'');
     <div class="row"><div class="field"><label>Email (their eXp email — this is the sign-in)</label><input id="f-email" type="email" value="${v('email')}"></div><div class="field"><label>Phone</label><input id="f-phone" value="${v('phone')}"></div></div>
     <div class="row"><div class="field"><label>Role</label><select id="f-role"><option value="member" ${m&&m.role==='member'?'selected':''}>Member</option><option value="admin" ${m&&m.role==='admin'?'selected':''}>Admin</option></select></div><div class="field"><label>Languages</label><select id="f-langs"><option value="en">English</option><option value="es" ${m&&String(m.langs)==='es'?'selected':''}>Español</option><option value="en,es" ${m&&(m.langs||[]).length===2?'selected':''}>English + Español</option></select></div></div>
     <div class="field"><label>Title (e.g., REALTOR®, Team Lead)</label><input id="f-title" value="${v('title')}"></div>
+    <div class="row"><div class="field"><label>New-agent onboarding checklist</label><select id="f-onb"><option value="">Off</option><option value="1" ${m&&m.onboarding?'selected':''}>Show on their Home screen</option></select></div><div class="field"><label>Mentor</label><select id="f-mentor"><option value="">—</option>${active().filter(x=>!m||x.id!==m.id).map(x=>`<option value="${x.id}" ${m&&m.mentor_id===x.id?'selected':''}>${esc(x.full_name)}</option>`).join('')}</select></div></div>
+    ${m&&m.onboarding?`<div class="field"><label>Progress</label><div class="chips">${db.obSteps.map(st=>{ const d=db.obProg.some(p=>p.member_id===m.id&&p.step_id===st.id); return `<span class="${d?'ok':''}" data-ob-toggle="${st.id}" data-on="${d}" style="cursor:pointer" title="Click to toggle">${d?'✓ ':''}${esc(st.title)}</span>`; }).join('')}</div></div>`:''}
     <div class="actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn p" id="f-save">${m?'Save':'Add member'}</button></div>`);
-  $('#f-save').onclick=async()=>{ const row={full_name:$('#f-name').value.trim(),email:$('#f-email').value.trim().toLowerCase(),phone:$('#f-phone').value.trim()||null,role:$('#f-role').value,langs:$('#f-langs').value.split(','),title:$('#f-title').value.trim()||null}; if(!row.full_name||!row.email.includes('@')) return;
+  $$('[data-ob-toggle]').forEach(c=>c.onclick=async()=>{ const on=c.dataset.on==='true'; if(on) await q(sb.from('onboarding_progress').delete().match({member_id:m.id,step_id:c.dataset.obToggle}),'ob'); else await q(sb.from('onboarding_progress').insert({member_id:m.id,step_id:c.dataset.obToggle}),'ob'); await loadAll(); renderAll(); memberForm(db.members.find(x=>x.id===m.id)); });
+  $('#f-save').onclick=async()=>{ const row={full_name:$('#f-name').value.trim(),email:$('#f-email').value.trim().toLowerCase(),phone:$('#f-phone').value.trim()||null,role:$('#f-role').value,langs:$('#f-langs').value.split(','),title:$('#f-title').value.trim()||null,onboarding:!!$('#f-onb').value,mentor_id:$('#f-mentor').value||null}; if(!row.full_name||!row.email.includes('@')) return; if(row.onboarding&&!(m&&m.onboarding)) row.onboarding_started_at=new Date().toISOString();
     try{ if(m) await q(sb.from('members').update(row).eq('id',m.id),'mb'); else await q(sb.from('members').insert({...row,active:true}),'mb'); }catch(e){ toast(e.message); return; }
     closeModal(); await loadAll(); renderAll(); toast(m?'Saved':'Member added — they can sign in to the app now.'); };
 }
