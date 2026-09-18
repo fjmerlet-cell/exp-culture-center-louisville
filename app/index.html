@@ -392,6 +392,7 @@ async function loadAll(){
     sb.from('push_subscriptions').select('id').then(r=>r.data||[])
   ]);
   Object.assign(db,{members,rooms,events,rsvps,bookings,spotlights,channels,resources,checkins,partners,anns,annReads,obSteps,obProg,pushSubs});
+  if (db.me){ const fresh=members.find(m=>m.id===db.me.id); if (fresh) db.me=Object.assign(db.me,fresh); }
   db.msgs={}; recent.reverse().forEach(m=>{ const k=m.channel_id||m.dm_key; (db.msgs[k]=db.msgs[k]||[]).push(m); });
 }
 
