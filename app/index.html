@@ -198,9 +198,14 @@ input,select,textarea{font:inherit}
   <div class="orb o1" aria-hidden="true"></div><div class="orb o2" aria-hidden="true"></div><div class="orb o3" aria-hidden="true"></div>
   <div class="logo"><img src="img/exp-logo-white.png" alt="eXp Realty"><span data-i18n="app">Culture Center Louisville</span></div>
   <h1><span data-i18n="auth.t1">Built by agents, for agents.</span> <span class="grad" data-i18n="auth.t2">In Louisville.</span></h1>
-  <p data-i18n="auth.p">Events, room booking, chat, and the office directory, in one place. Sign in with your eXp email and we'll send you a link. No password.</p>
+  <p data-i18n="auth.p">Events, room booking, chat, and the office directory, in one place. Enter your eXp email and we'll send you a 6-digit code. No password.</p>
   <div class="field"><label for="a-email" data-i18n="auth.label">eXp email</label><input id="a-email" type="email" inputmode="email" autocomplete="email" placeholder="name@exprealty.com"></div>
-  <button class="btn btn-primary btn-block" id="a-send" style="margin-top:14px" data-i18n="auth.send">Send me a link</button>
+  <button class="btn btn-primary btn-block" id="a-send" style="margin-top:14px" data-i18n="auth.send">Send me a code</button>
+  <div id="a-code-wrap" hidden>
+    <div class="field"><label for="a-code" data-i18n="auth.codelabel">6-digit code from the email</label><input id="a-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="••••••" style="letter-spacing:.3em;font-size:22px;text-align:center"></div>
+    <button class="btn btn-primary btn-block" id="a-verify" style="margin-top:12px" data-i18n="auth.verify">Sign in</button>
+    <p class="note" style="text-align:center;margin-top:10px"><button id="a-resend" style="color:var(--blue);font-weight:600" data-i18n="auth.resend">Send a new code</button></p>
+  </div>
   <p class="note" data-i18n="auth.note">Members of the Culture Center only. Not on the list yet? Ask Francisco or Andy to add you.</p>
   <div class="install" id="install-tip"><b data-i18n="auth.installb">Add to your home screen</b><span data-i18n="auth.installp">Tap Share, then "Add to Home Screen" so this opens like an app.</span></div>
   <p class="note" id="a-msg" style="margin-top:16px;text-align:center"></p>
@@ -374,7 +379,7 @@ function normSpot(s){ return { ...s, who:s.member_name }; }
    I18N
    ========================================================================== */
 const ES = {
-  'app':'Culture Center','auth.t1':'Hecho por agentes, para agentes.','auth.t2':'En Louisville.','auth.p':'Eventos, reservas de salas, chat y el directorio de la oficina, en un solo lugar. Entra con tu correo de eXp y te mandamos un enlace. Sin contraseña.','app':'Culture Center Louisville','home.weyebrow':'eXp Culture Center Louisville','home.wtitle':'Hecho por agentes, para agentes.','home.wtitle2':'En Louisville.','home.wsub':'Reserva una sala, confirma tu asistencia a una capacitación, escríbele a un colega, mira quién acaba de hacer cap.','auth.label':'Correo de eXp','auth.send':'Mándame el enlace','auth.note':'Solo para miembros del Culture Center. ¿Todavía no estás en la lista? Pídele a Francisco o a Andy que te agreguen.','auth.installb':'Agrégala a tu pantalla de inicio','auth.installp':'Toca Compartir y luego "Agregar a inicio" para que se abra como una app.','auth.demo':'Ver como Brenda (demo)',
+  'app':'Culture Center','auth.t1':'Hecho por agentes, para agentes.','auth.t2':'En Louisville.','auth.p':'Eventos, reservas de salas, chat y el directorio de la oficina, en un solo lugar. Escribe tu correo de eXp y te mandamos un código de 6 dígitos. Sin contraseña.','app':'Culture Center Louisville','home.weyebrow':'eXp Culture Center Louisville','home.wtitle':'Hecho por agentes, para agentes.','home.wtitle2':'En Louisville.','home.wsub':'Reserva una sala, confirma tu asistencia a una capacitación, escríbele a un colega, mira quién acaba de hacer cap.','auth.label':'Correo de eXp','auth.send':'Mándame un código','auth.codelabel':'Código de 6 dígitos del correo','auth.verify':'Entrar','auth.resend':'Mandar otro código','auth.note':'Solo para miembros del Culture Center. ¿Todavía no estás en la lista? Pídele a Francisco o a Andy que te agreguen.','auth.installb':'Agrégala a tu pantalla de inicio','auth.installp':'Toca Compartir y luego "Agregar a inicio" para que se abra como una app.','auth.demo':'Ver como Brenda (demo)',
   'demo.banner':'Vista previa con datos de ejemplo. Nada de esto se guarda en la oficina todavía.',
   'home.hi':'Hola,','home.next':'Lo que sigue','home.all':'Todos los eventos','home.open':'salas libres ahora','home.unread':'mensajes sin leer','home.spot':'Agente destacado','home.quick':'Acciones rápidas','home.q1':'Reservar una sala','home.q2':'Buscar a un agente',
   'ev.title':'Eventos','ev.new':'+ Nuevo evento','ev.up':'Próximos','ev.mine':'Míos','ev.past':'Pasados','ev.going':'van','ev.rsvp':'Confirmar','ev.goingBtn':'Voy','ev.cancel':'Ya no voy','ev.cal':'Agregar al calendario','ev.empty':'Nada por aquí todavía.',
@@ -445,15 +450,38 @@ async function resolveSession(session){
   if (error || !data){ await sb.auth.signOut(); showAuth(state.lang==='es'?'Este correo no está en la lista de miembros. Pídele a Francisco o a Andy que te agreguen.':'This email is not on the member list. Ask Francisco or Andy to add you.'); return; }
   db.me = data; enterApp();
 }
-$('#a-send').addEventListener('click', async ()=>{
+async function sendCode(){
   const email=$('#a-email').value.trim().toLowerCase(); if(!email||!email.includes('@')){ $('#a-email').focus(); return; }
-  $('#a-send').disabled=true;
-  const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.origin + location.pathname, shouldCreateUser: true } });
+  $('#a-send').disabled=true; $('#a-msg').textContent='';
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser: true } });
   $('#a-send').disabled=false;
-  if (error){ const notMember=/member list/i.test(error.message); $('#a-msg').textContent = notMember ? (state.lang==='es'?'Este correo no está en la lista de miembros. Pídele a Francisco o a Andy que te agreguen.':'This email is not on the member list. Ask Francisco or Andy to add you.') : error.message; return; }
-  $('#a-msg').textContent = state.lang==='es' ? 'Listo. Revisa tu correo y toca el enlace en este teléfono.' : 'Sent. Check your email and tap the link on this phone.';
-});
-$('#signout').addEventListener('click', async ()=>{ await sb.auth.signOut(); db.me=null; showAuth(); });
+  if (error){
+    const m=error.message||'';
+    if (/member list/i.test(m)) $('#a-msg').textContent = state.lang==='es'?'Este correo no está en la lista de miembros. Pídele a Francisco o a Andy que te agreguen.':'This email is not on the member list. Ask Francisco or Andy to add you.';
+    else if (/rate limit/i.test(m)) $('#a-msg').textContent = state.lang==='es'?'Se enviaron demasiados correos por ahora. Intenta de nuevo en un rato.':'Too many emails sent for now. Try again in a little while.';
+    else $('#a-msg').textContent = m;
+    return;
+  }
+  $('#a-code-wrap').hidden=false; $('#a-send').hidden=true; $('#a-email').disabled=true;
+  $('#a-msg').textContent = state.lang==='es' ? 'Listo. Revisa tu correo y escribe el código aquí.' : 'Sent. Check your email and enter the code here.';
+  setTimeout(()=>$('#a-code').focus(),50);
+}
+async function verifyCode(){
+  const email=$('#a-email').value.trim().toLowerCase(); const token=$('#a-code').value.replace(/\D/g,'');
+  if (token.length<6){ $('#a-code').focus(); return; }
+  $('#a-verify').disabled=true;
+  const { error } = await sb.auth.verifyOtp({ email, token, type:'email' });
+  $('#a-verify').disabled=false;
+  if (error){ $('#a-msg').textContent = /expired|invalid/i.test(error.message) ? (state.lang==='es'?'Código incorrecto o vencido. Pide uno nuevo.':'That code is wrong or expired. Send a new one.') : error.message; return; }
+  // onAuthStateChange takes it from here
+}
+function resetAuthForm(){ $('#a-code-wrap').hidden=true; $('#a-send').hidden=false; $('#a-email').disabled=false; $('#a-code').value=''; }
+$('#a-send').addEventListener('click', sendCode);
+$('#a-verify').addEventListener('click', verifyCode);
+$('#a-code').addEventListener('keydown', e=>{ if(e.key==='Enter') verifyCode(); });
+$('#a-code').addEventListener('input', ()=>{ if($('#a-code').value.replace(/\D/g,'').length===6) verifyCode(); });
+$('#a-resend').addEventListener('click', ()=>{ resetAuthForm(); sendCode(); });
+$('#signout').addEventListener('click', async ()=>{ await sb.auth.signOut(); db.me=null; resetAuthForm(); showAuth(); });
 sb.auth.onAuthStateChange((event, session)=>{ if (event==='SIGNED_IN' || event==='INITIAL_SESSION') resolveSession(session); if (event==='SIGNED_OUT') showAuth(); });
 
 /* ==========================================================================
