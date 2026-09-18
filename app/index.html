@@ -85,6 +85,13 @@ input,select,textarea{font:inherit}
 .hero-card b{font-family:var(--display);font-size:18px;display:block;margin-top:6px}
 .hero-card small{color:#C9D2E0;font-size:13px;display:block;margin-top:4px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.welcome{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--line2);min-height:150px}
+.welcome img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(.7)}
+.welcome::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,18,32,.35),rgba(11,18,32,.96) 75%)}
+.welcome .wtx{z-index:1}
+.welcome .wtx{position:relative;padding:72px 16px 16px;text-shadow:0 1px 8px rgba(0,0,0,.6)}
+.welcome b{display:block;font-family:var(--display);font-size:20px;margin-top:6px;letter-spacing:-.02em}
+.welcome small{display:block;color:#C9D2E0;font-size:13px;margin-top:4px}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;text-align:left;color:inherit}
 .stat b{font-family:var(--display);font-size:22px;display:block}
 .stat span{color:var(--muted);font-size:12px}
@@ -143,7 +150,10 @@ input,select,textarea{font:inherit}
 .chips span{font-size:11px;padding:3px 9px;border-radius:999px;background:var(--surface2);color:var(--muted)}
 
 /* sign in */
-.auth{min-height:100vh;flex-direction:column;justify-content:center;padding:calc(var(--sat) + 32px) 24px calc(var(--sab) + 32px)}
+.auth{min-height:100vh;flex-direction:column;justify-content:center;padding:calc(var(--sat) + 32px) 24px calc(var(--sab) + 32px);position:relative;overflow:hidden}
+.auth .bg{position:absolute;inset:0;z-index:-1;background:url(img/signin.jpg) center/cover no-repeat;opacity:.28;filter:saturate(.6)}
+.auth .bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,18,32,.3),rgba(11,18,32,.9) 60%,var(--bg))}
+.auth .logo img{height:34px;width:auto;display:block}
 .screen.auth.active{display:flex}
 .auth .logo{font-family:var(--display);font-weight:700;font-size:30px;letter-spacing:-.05em;display:flex;align-items:center;gap:12px}
 .auth .logo span{font-size:15px;letter-spacing:0;font-weight:600;color:var(--muted);border-left:1px solid var(--line2);padding-left:12px}
@@ -171,9 +181,10 @@ input,select,textarea{font:inherit}
 
 <!-- ===== SIGN IN ===== -->
 <section class="screen auth" id="s-auth">
-  <div class="logo">eXp<span data-i18n="app">Culture Center</span></div>
-  <h1 data-i18n="auth.title">Sign in with your eXp email</h1>
-  <p data-i18n="auth.p">We'll send you a link. Tap it on this phone and you're in. No password.</p>
+  <div class="bg" aria-hidden="true"></div>
+  <div class="logo"><img src="img/exp-logo-white.png" alt="eXp Realty"><span data-i18n="app">Culture Center Louisville</span></div>
+  <h1 data-i18n="auth.title">Welcome to the Center</h1>
+  <p data-i18n="auth.p">Events, room booking, chat, and the office directory, in one place. Sign in with your eXp email and we'll send you a link. No password.</p>
   <div class="field"><label for="a-email" data-i18n="auth.label">eXp email</label><input id="a-email" type="email" inputmode="email" autocomplete="email" placeholder="name@exprealty.com"></div>
   <button class="btn btn-primary btn-block" id="a-send" style="margin-top:14px" data-i18n="auth.send">Send me a link</button>
   <p class="note" data-i18n="auth.note">Members of the Culture Center only. Not on the list yet? Ask Francisco or Andy to add you.</p>
@@ -184,7 +195,11 @@ input,select,textarea{font:inherit}
 <!-- ===== HOME ===== -->
 <section class="screen" id="s-home">
   <div class="top"><div><h1><span data-i18n="home.hi">Welcome,</span> <span id="h-name">Brenda</span></h1><p class="sub" id="h-date"></p></div><div class="avatar" id="h-av">B</div></div>
-    <div class="sec-h"><h2 data-i18n="home.next">Next up</h2><button data-go="events" data-i18n="home.all">All events</button></div>
+    <div class="welcome" id="h-welcome">
+    <img src="img/welcome.jpg" alt="">
+    <div class="wtx"><span class="eyebrow" style="color:#C9D2E0" data-i18n="home.weyebrow">eXp Culture Center Louisville</span><b data-i18n="home.wtitle">Built by agents, for agents.</b><small data-i18n="home.wsub">Book a room, RSVP to a training, message a colleague, see who just capped.</small></div>
+  </div>
+  <div class="sec-h" style="margin-top:22px"><h2 data-i18n="home.next">Next up</h2><button data-go="events" data-i18n="home.all">All events</button></div>
   <div id="h-next"></div>
   <div class="grid2">
     <button class="stat" data-go="spaces"><b id="h-open">3</b><span data-i18n="home.open">rooms open right now</span></button>
@@ -344,7 +359,7 @@ function normSpot(s){ return { ...s, who:s.member_name }; }
    I18N
    ========================================================================== */
 const ES = {
-  'app':'Culture Center','auth.title':'Entra con tu correo de eXp','auth.p':'Te mandamos un enlace. Ábrelo en este teléfono y listo. Sin contraseña.','auth.label':'Correo de eXp','auth.send':'Mándame el enlace','auth.note':'Solo para miembros del Culture Center. ¿Todavía no estás en la lista? Pídele a Francisco o a Andy que te agreguen.','auth.installb':'Agrégala a tu pantalla de inicio','auth.installp':'Toca Compartir y luego "Agregar a inicio" para que se abra como una app.','auth.demo':'Ver como Brenda (demo)',
+  'app':'Culture Center','auth.title':'Bienvenido al Center','auth.p':'Eventos, reservas de salas, chat y el directorio de la oficina, en un solo lugar. Entra con tu correo de eXp y te mandamos un enlace. Sin contraseña.','app':'Culture Center Louisville','home.weyebrow':'eXp Culture Center Louisville','home.wtitle':'Hecho por agentes, para agentes.','home.wsub':'Reserva una sala, confirma tu asistencia a una capacitación, escríbele a un colega, mira quién acaba de hacer cap.','auth.label':'Correo de eXp','auth.send':'Mándame el enlace','auth.note':'Solo para miembros del Culture Center. ¿Todavía no estás en la lista? Pídele a Francisco o a Andy que te agreguen.','auth.installb':'Agrégala a tu pantalla de inicio','auth.installp':'Toca Compartir y luego "Agregar a inicio" para que se abra como una app.','auth.demo':'Ver como Brenda (demo)',
   'demo.banner':'Vista previa con datos de ejemplo. Nada de esto se guarda en la oficina todavía.',
   'home.hi':'Hola,','home.next':'Lo que sigue','home.all':'Todos los eventos','home.open':'salas libres ahora','home.unread':'mensajes sin leer','home.spot':'Agente destacado','home.quick':'Acciones rápidas','home.q1':'Reservar una sala','home.q2':'Buscar a un agente',
   'ev.title':'Eventos','ev.new':'+ Nuevo evento','ev.up':'Próximos','ev.mine':'Míos','ev.past':'Pasados','ev.going':'van','ev.rsvp':'Confirmar','ev.goingBtn':'Voy','ev.cancel':'Ya no voy','ev.cal':'Agregar al calendario','ev.empty':'Nada por aquí todavía.',
@@ -446,7 +461,7 @@ function renderHome(){
   $('#h-name').textContent=me.name.split(' ')[0]; $('#h-av').textContent=me.initials;
   $('#h-date').textContent=new Date().toLocaleDateString(loc(),{weekday:'long',month:'long',day:'numeric'});
   const next=store.events().map(normEvent).filter(e=>new Date(e.when)>new Date()).slice(0,2);
-  $('#h-next').innerHTML = next.map(eventRow).join('') || `<div class="empty">${t('ev.empty')}</div>`;
+  $('#h-next').innerHTML = next.map(eventRow).join('') || `<div class="card" style="color:var(--muted);font-size:14px">${state.lang==='es'?'Todavía no hay eventos programados. En cuanto se publique uno, aparece aquí.':'No events on the calendar yet. As soon as one is posted, it shows up here.'}${isAdmin()?` <button data-adm="event" style="color:var(--blue);font-weight:600">${state.lang==='es'?'Publicar el primero →':'Post the first one →'}</button>`:''}</div>`;
   const now=new Date();
   const openCount=store.rooms().map(normRoom).filter(r=>r.open && !store.bookings().some(b=>b.room_id===r.id && new Date(b.starts_at)<=now && new Date(b.ends_at)>now)).length;
   $('#h-open').textContent=openCount;
@@ -454,7 +469,7 @@ function renderHome(){
   const sp=store.spotlights().map(normSpot);
   $('#h-spot').innerHTML = sp.map((s,i)=> i===0
     ? `<div class="hero-card"><span class="eyebrow" style="color:#C9D2E0">${t('home.spot')}</span><b>${esc(s.who)}</b><small>${esc(L(s,'what'))}${L(s,'note')?' · '+esc(L(s,'note')):''}</small></div>`
-    : `<div class="item"><div class="ic ${['b','c','g','v'][i%4]}">★</div><div class="tx"><b>${esc(L(s,'what'))}</b><small>${esc(s.who)}${L(s,'note')?' · '+esc(L(s,'note')):''}</small></div></div>`).join('') || `<div class="empty">${t('ev.empty')}</div>`;
+    : `<div class="item"><div class="ic ${['b','c','g','v'][i%4]}">★</div><div class="tx"><b>${esc(L(s,'what'))}</b><small>${esc(s.who)}${L(s,'note')?' · '+esc(L(s,'note')):''}</small></div></div>`).join('') || `<div class="card" style="color:var(--muted);font-size:14px">${state.lang==='es'?'Aquí celebramos cappings, ICON, primeros cierres y agentes nuevos.':'This is where cappings, ICON, first closings, and new agents get celebrated.'}${isAdmin()?` <button data-adm="spot" style="color:var(--blue);font-weight:600">${state.lang==='es'?'Publicar un destacado →':'Post a spotlight →'}</button>`:''}</div>`;
 }
 
 function eventRow(e){
@@ -630,7 +645,7 @@ function adminForm(kind, m, self){
     closeSheet(); await loadAll(); if (self){ const fresh=await sb.from('members').select('*').eq('id',db.me.id).single(); if(fresh.data) db.me=fresh.data; } renderAll(); toast(kind==='member'?(m?(state.lang==='es'?'Guardado':'Saved'):t('f.added')):t('f.saved'));
   };
 }
-$$('[data-adm]').forEach(b=>b.addEventListener('click',()=>adminForm(b.dataset.adm)));
+document.addEventListener('click',e=>{ const b=e.target.closest('[data-adm]'); if(b) adminForm(b.dataset.adm); });
 $('#ev-new').addEventListener('click',()=>adminForm('event'));
 
 /* ==========================================================================
