@@ -355,7 +355,7 @@ try { const s=JSON.parse(localStorage.getItem(LS_KEY)||'null'); if (s && s.lang)
 function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({lang:state.lang})); }catch(e){} }
 
 // In-memory cache, refreshed from the database
-const db = { me:null, members:[], rooms:[], events:[], rsvps:[], bookings:[], spotlights:[], channels:[], msgs:{}, lastSeen:{}, resources:[] };
+const db = { me:null, members:[], rooms:[], events:[], rsvps:[], bookings:[], spotlights:[], channels:[], msgs:{}, lastSeen:{}, resources:[], checkins:[] };
 try { db.lastSeen = JSON.parse(localStorage.getItem('ccl-seen')||'{}'); } catch(e){}
 function markSeen(id){ db.lastSeen[id]=new Date().toISOString(); try{ localStorage.setItem('ccl-seen', JSON.stringify(db.lastSeen)); }catch(e){} }
 
@@ -364,7 +364,7 @@ function dmKey(a,b){ return [a,b].sort().join(':'); }
 
 async function loadAll(){
   const now = new Date(); const from = new Date(now); from.setDate(from.getDate()-1); const to = new Date(now); to.setDate(to.getDate()+35);
-  const [members, rooms, events, rsvps, bookings, spotlights, channels, recent, resources] = await Promise.all([
+  const [members, rooms, events, rsvps, bookings, spotlights, channels, recent, resources, checkins] = await Promise.all([
     q(sb.from('members').select('*').eq('active',true).order('full_name'),'members'),
     q(sb.from('rooms').select('*').order('sort'),'rooms'),
     q(sb.from('events').select('*').gte('starts_at', new Date(now.getTime()-90*864e5).toISOString()).order('starts_at'),'events'),
@@ -373,9 +373,10 @@ async function loadAll(){
     q(sb.from('spotlights').select('*').order('created_at',{ascending:false}).limit(8),'spotlights'),
     q(sb.from('channels').select('*').order('sort'),'channels'),
     q(sb.from('messages').select('id,channel_id,dm_key,sender_id,body,created_at').order('created_at',{ascending:false}).limit(300),'messages'),
-    sb.from('resources').select('*').order('pinned',{ascending:false}).order('sort').order('created_at',{ascending:false}).then(r=>r.data||[])
+    sb.from('resources').select('*').order('pinned',{ascending:false}).order('sort').order('created_at',{ascending:false}).then(r=>r.data||[]),
+    sb.from('checkins').select('*').then(r=>r.data||[])
   ]);
-  Object.assign(db,{members,rooms,events,rsvps,bookings,spotlights,channels,resources});
+  Object.assign(db,{members,rooms,events,rsvps,bookings,spotlights,channels,resources,checkins});
   db.msgs={}; recent.reverse().forEach(m=>{ const k=m.channel_id||m.dm_key; (db.msgs[k]=db.msgs[k]||[]).push(m); });
 }
 
@@ -388,6 +389,8 @@ const store = {
   event(id){ return db.events.find(e=>e.id===id); },
   rsvpCount(id){ return db.rsvps.filter(r=>r.event_id===id).length; },
   mine(id){ return db.rsvps.some(r=>r.event_id===id && r.member_id===db.me.id); },
+  checkedIn(id){ return db.checkins.some(c=>c.event_id===id && c.member_id===db.me.id); },
+  attendance(id){ return db.checkins.filter(c=>c.event_id===id); },
   spotlights(){ return db.spotlights; },
   channels(){ return db.channels; },
   dms(){ // every member I've exchanged messages with
@@ -444,6 +447,7 @@ function seriesDates(start, rule, n){ n=Math.min(Math.max(n||1,1),26); const out
   if(rule==='m'){ const wd=start.getDay(), nth=Math.ceil(start.getDate()/7); for(let k=0;k<n;k++){ const y=start.getFullYear(), m=start.getMonth()+k; const first=new Date(y,m,1); let d=1+((wd-first.getDay()+7)%7)+(nth-1)*7; const dim=new Date(y,m+1,0).getDate(); while(d>dim) d-=7; out.push(new Date(y,m,d,start.getHours(),start.getMinutes())); } }
   else { const step=rule==='w2'?14:7; for(let k=0;k<n;k++){ const d=new Date(start); d.setDate(d.getDate()+k*step); out.push(d); } }
   return out; }
+function checkinWindow(e){ const now=Date.now(), st=new Date(e.when).getTime(), en=st+(e.dur||60)*60000; return now>=st-30*60000 && now<=en+2*3600000; }
 function seriesLabel(e){ const r=e.series_rule; if(!r) return ''; return state.lang==='es'?{w1:'Cada semana',w2:'Cada 2 semanas',m:'Cada mes'}[r]:{w1:'Weekly',w2:'Every 2 weeks',m:'Monthly'}[r]; }
 function fmtDay(iso){ return new Date(iso).toLocaleDateString(loc(),{weekday:'short',month:'short',day:'numeric'}); }
 function fmtTime(iso){ return new Date(iso).toLocaleTimeString(loc(),{hour:'numeric',minute:'2-digit'}); }
@@ -562,7 +566,7 @@ function renderHome(){
 
 function eventRow(e){
   const mine=store.mine(e.id);
-  return `<button class="item" data-ev="${e.id}"><div class="ic b">${dow(e.when)}</div><div class="tx"><b>${esc(L(e,'title'))}</b><small>${fmtDay(e.when)} · ${fmtTime(e.when)} · ${esc(e.where)} · ${e.lang||''}${e.series_rule?' · ↻ '+seriesLabel(e):''}</small></div><span class="r"><span class="pill ${mine?'on':''}">${mine?t('ev.goingBtn'):e.going+' '+t('ev.going')}</span></span></button>`;
+  return `<button class="item" data-ev="${e.id}"><div class="ic b">${dow(e.when)}</div><div class="tx"><b>${esc(L(e,'title'))}</b><small>${fmtDay(e.when)} · ${fmtTime(e.when)} · ${esc(e.where)} · ${e.lang||''}${e.series_rule?' · ↻ '+seriesLabel(e):''}</small></div><span class="r"><span class="pill ${store.checkedIn(e.id)?'on':(mine?'on':'')}">${store.checkedIn(e.id)?'✓ '+(state.lang==='es'?'Asististe':'Attended'):(new Date(e.when)<new Date()&&isAdmin()?store.attendance(e.id).length+' '+(state.lang==='es'?'asistieron':'attended'):(mine?t('ev.goingBtn'):e.going+' '+t('ev.going')))}</span></span></button>`;
 }
 let evFilter='upcoming';
 function renderEvents(){
@@ -581,18 +585,41 @@ document.addEventListener('click', e=>{
   openSheet(`<span class="eyebrow coral">${esc(L(ev,'kind')||'')} · ${ev.lang||''}</span><h2 style="margin-top:8px">${esc(L(ev,'title'))}</h2>
     <p class="meta">${fmtDay(ev.when)} · ${fmtTime(ev.when)} · ${ev.dur} min · ${esc(ev.where)}${ev.series_rule?` · <span style="color:var(--amber)">↻ ${seriesLabel(ev)}</span>`:''}</p>
     <p class="body">${esc(L(ev,'desc'))}</p>
-    <p class="meta" style="margin-top:12px">${ev.going} ${t('ev.going')}</p>
+    <p class="meta" style="margin-top:12px">${ev.going} ${t('ev.going')}${store.attendance(ev.id).length?` · ${store.attendance(ev.id).length} ${state.lang==='es'?'asistieron':'checked in'}`:''}</p>
+    ${store.checkedIn(ev.id)?`<div class="card" style="margin-top:12px;border-color:var(--green);color:var(--green);font-weight:600">✓ ${state.lang==='es'?'Ya hiciste check-in':'You\'re checked in'}</div>`
+      : checkinWindow(ev)?`<div class="card" style="margin-top:12px"><b style="font-family:var(--display)">${state.lang==='es'?'Check-in':'Check in'}</b><p class="meta" style="margin-top:4px">${state.lang==='es'?'Escribe el código de 4 dígitos que está en la pantalla o que te da el anfitrión.':'Enter the 4-digit code on the screen or from the host.'}</p><div class="row" style="margin-top:10px"><input id="ci-code" inputmode="numeric" maxlength="4" placeholder="0000" style="text-align:center;font-size:22px;letter-spacing:.3em;font-family:var(--display)"><button class="btn btn-primary" id="ci-go" style="flex:0 0 auto;white-space:nowrap;padding-inline:20px">${state.lang==='es'?'Check-in':'Check in'}</button></div><p class="meta" id="ci-msg" style="margin-top:6px"></p></div>`:''}
     <div class="actions"><button class="btn ${mine?'btn-ghost':'btn-primary'}" id="rsvp">${mine?t('ev.cancel'):t('ev.rsvp')}</button></div>
+    ${isAdmin()?`<div class="sec" style="margin-top:18px"><div class="sec-h"><h2>${state.lang==='es'?'Asistencia':'Attendance'}</h2><span id="ci-admin-code" style="font-family:var(--display);color:var(--amber)"></span></div><div id="att-list"></div><p class="note" style="margin-top:8px"><button id="att-csv" style="color:var(--blue);font-weight:600">${state.lang==='es'?'Descargar lista (CSV)':'Download list (CSV)'}</button></p></div>`:''}
     <p class="meta" style="margin-top:14px">${t('ev.cal')}</p><div class="actions" style="margin-top:8px">${calButtons({title:ev.title,start:ev.when,end:new Date(new Date(ev.when).getTime()+ev.dur*60000),location:ev.where,desc:ev.desc,uid:ev.id})}</div>
     ${isAdmin()?`<p class="note" style="text-align:center"><button id="ev-del" style="color:var(--red);font-weight:600">${ev.series_id?(state.lang==='es'?'Eliminar solo este':'Delete this one'):(state.lang==='es'?'Eliminar evento':'Delete event')}</button>${ev.series_id?` &nbsp;·&nbsp; <button id="ev-del-series" style="color:var(--red);font-weight:600">${state.lang==='es'?'Eliminar este y los siguientes':'Delete this and all future'}</button>`:''}</p>`:''}`);
   $('#rsvp').onclick=async()=>{
     try{ if(mine) await q(sb.from('rsvps').delete().match({event_id:ev.id,member_id:db.me.id}),'unrsvp'); else await q(sb.from('rsvps').insert({event_id:ev.id,member_id:db.me.id}),'rsvp'); }catch(e){ toast(e.message); return; }
     db.rsvps = await q(sb.from('rsvps').select('*'),'rsvps'); closeSheet(); renderAll(); toast(mine?t('toast.unrsvp'):t('toast.rsvp'));
   };
+  const go=$('#ci-go'); if (go) go.onclick=async()=>{ const code=$('#ci-code').value.replace(/\D/g,''); if(code.length<4){ $('#ci-code').focus(); return; } go.disabled=true;
+    const { data, error } = await sb.rpc('event_checkin',{p_event:ev.id, p_code:code}); go.disabled=false;
+    const msgs=state.lang==='es'?{bad_code:'Código incorrecto.',too_early:'El check-in abre 30 minutos antes.',closed:'El check-in ya cerró.',not_member:'No estás en la lista.'}:{bad_code:'Wrong code.',too_early:'Check-in opens 30 minutes before start.',closed:'Check-in has closed.',not_member:'You are not on the member list.'};
+    if (error){ $('#ci-msg').textContent=error.message; return; }
+    if (data!=='ok'){ $('#ci-msg').textContent=msgs[data]||data; return; }
+    db.checkins=await sb.from('checkins').select('*').then(r=>r.data||[]); closeSheet(); renderAll(); toast(state.lang==='es'?'¡Listo! Check-in hecho.':'Checked in. Welcome!'); };
+  if (isAdmin()) renderAttendance(ev);
   const del=$('#ev-del'); if (del) del.onclick=async()=>{ if(!confirm(state.lang==='es'?'¿Eliminar este evento?':'Delete this event?')) return; await q(sb.from('events').delete().eq('id',ev.id),'del'); closeSheet(); await loadAll(); renderAll(); };
   const delS=$('#ev-del-series'); if (delS) delS.onclick=async()=>{ if(!confirm(state.lang==='es'?'¿Eliminar este evento y todos los siguientes de la serie?':'Delete this event and all future ones in the series?')) return; await q(sb.from('events').delete().eq('series_id',ev.series_id).gte('starts_at',ev.when),'del'); closeSheet(); await loadAll(); renderAll(); };
 });
 
+async function renderAttendance(ev){
+  const codeEl=$('#ci-admin-code'); if(codeEl){ const { data } = await sb.from('event_codes').select('code').eq('event_id',ev.id).maybeSingle(); codeEl.textContent = data ? (state.lang==='es'?'Código: ':'Code: ')+data.code : ''; }
+  const att=store.attendance(ev.id); const ids=new Set([...db.rsvps.filter(r=>r.event_id===ev.id).map(r=>r.member_id), ...att.map(c=>c.member_id)]);
+  const rows=[...ids].map(id=>{ const m=store.members().find(x=>x.id===id); const c=att.find(x=>x.member_id===id); return {id, name:m?m.full_name:'—', email:m?m.email:'', rsvp:db.rsvps.some(r=>r.event_id===ev.id&&r.member_id===id), in:!!c, at:c?c.checked_at:''}; }).sort((a,b)=>(b.in-a.in)||a.name.localeCompare(b.name));
+  const list=$('#att-list'); if(!list) return;
+  list.innerHTML = rows.length ? rows.map(r=>`<div class="toggle"><div><b>${esc(r.name)}</b><small>${r.in?'✓ '+(state.lang==='es'?'Presente':'Checked in')+(r.at?' · '+fmtTime(r.at):''):(r.rsvp?(state.lang==='es'?'Confirmó, no ha llegado':'RSVP\'d, not checked in'):'')}</small></div><button class="sw" role="switch" aria-checked="${r.in}" data-att="${r.id}"></button></div>`).join('')
+    : `<div class="empty">${state.lang==='es'?'Nadie ha confirmado todavía.':'No RSVPs yet.'}</div>`;
+  $$('[data-att]').forEach(b=>b.onclick=async()=>{ const id=b.dataset.att, on=b.getAttribute('aria-checked')==='true';
+    try{ if(on) await q(sb.from('checkins').delete().match({event_id:ev.id,member_id:id}),'att'); else await q(sb.from('checkins').insert({event_id:ev.id,member_id:id,by_admin:true}),'att'); }catch(e){ toast(e.message); return; }
+    db.checkins=await sb.from('checkins').select('*').then(r=>r.data||[]); renderAttendance(ev); });
+  const csv=$('#att-csv'); if(csv) csv.onclick=()=>{ const lines=[['Name','Email','RSVP','Checked in','Time'].join(','), ...rows.map(r=>[r.name,r.email,r.rsvp?'yes':'no',r.in?'yes':'no',r.at?new Date(r.at).toLocaleString():''].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(','))];
+    const blob=new Blob([lines.join('\n')],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=(ev.title||'event').replace(/[^\w]+/g,'-')+'-'+String(ev.when).slice(0,10)+'-attendance.csv'; a.click(); };
+}
 function todayTimes(r){ const d0=new Date(); d0.setHours(0,0,0,0); const d1=new Date(d0.getTime()+864e5);
   const ts=store.bookings().filter(b=>b.room_id===r.id && new Date(b.starts_at)>=d0 && new Date(b.starts_at)<d1).sort((a,b)=>a.starts_at.localeCompare(b.starts_at)).map(b=>fmtTime(b.starts_at).replace(':00','')+'–'+fmtTime(b.ends_at).replace(':00',''));
   return ts.length?`<br><span style="color:var(--amber)">${state.lang==='es'?'Hoy':'Today'}: ${ts.join(', ')}</span>`:''; }
@@ -774,7 +801,7 @@ $('#adm-res').addEventListener('click',()=>resourceForm());
 
 function renderMore(){
   const me=meN(); $('#m-name').textContent=me.name; $('#m-av').innerHTML = db.me.avatar_url ? `<img src="${esc(db.me.avatar_url)}" alt="">` : me.initials; $('#m-email').textContent=me.email;
-  $('#m-chips').innerHTML=(me.langs||[]).map(l=>`<span>${l==='es'?'Español':'English'}</span>`).join('')+(me.spec||[]).map(s=>`<span>${esc(s)}</span>`).join('')+`<span style="color:var(--blue);cursor:pointer" id="edit-me">${state.lang==='es'?'Editar perfil':'Edit profile'}</span>`;
+  $('#m-chips').innerHTML=`<span>${db.checkins.filter(c=>c.member_id===db.me.id).length} ${state.lang==='es'?'eventos asistidos':'events attended'}</span>`+(me.langs||[]).map(l=>`<span>${l==='es'?'Español':'English'}</span>`).join('')+(me.spec||[]).map(s=>`<span>${esc(s)}</span>`).join('')+`<span style="color:var(--blue);cursor:pointer" id="edit-me">${state.lang==='es'?'Editar perfil':'Edit profile'}</span>`;
   $('#edit-me').onclick=()=>adminForm('member', me, true);
   $('#admin-sec').hidden=!isAdmin();
   const prefs=db.me.prefs||{};
