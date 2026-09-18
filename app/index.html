@@ -354,7 +354,6 @@ input,select,textarea{font:inherit}
    ========================================================================== */
 const SUPABASE_URL = 'https://pnwkkjqnkvivadlqathg.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_1_w-T-dOjVaiwI6lo-j0YA_hwW7QU8J';
-const DIGEST_SECRET = 'c01d20c7a3989d07e3be7e786a932f2a15c8ccc89593a12c'; // lets admins send themselves a test digest
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
 
 const LS_KEY='ccl-app-v1';
@@ -833,8 +832,8 @@ $('#adm-note').addEventListener('click', async()=>{ const es=state.lang==='es'; 
   const save=async()=>{ const value={subject:$('#wn-subj').value.trim()||null, body:$('#wn-body').value.trim(), body_es:$('#wn-es').value.trim()||null}; await q(sb.from('app_settings').upsert({key:'weekly_note', value, updated_at:new Date().toISOString()}),'note'); return value; };
   $('#wn-save').onclick=async()=>{ try{ await save(); }catch(e){ toast(e.message); return; } closeSheet(); toast(es?'Guardado.':'Saved.'); };
   $('#wn-test').onclick=async()=>{ try{ await save(); }catch(e){ toast(e.message); return; } $('#wn-test').disabled=true;
-    const r=await fetch(SUPABASE_URL+'/functions/v1/digest',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'x-webhook-secret':DIGEST_SECRET},body:JSON.stringify({type:'digest',test_to:db.me.email})}).catch(()=>null);
-    $('#wn-test').disabled=false; toast(r&&r.ok?(es?'Prueba enviada a tu correo.':'Test sent to your email.'):(es?'No se pudo enviar la prueba.':'Could not send the test.')); }; });
+    const { data, error } = await sb.rpc('send_digest_test');
+    $('#wn-test').disabled=false; toast(!error&&data==='ok'?(es?'Prueba enviada. Revisa tu correo en un minuto.':'Test sent. Check your email in a minute.'):(error?error.message:(es?'Solo los administradores pueden enviar pruebas.':'Only admins can send tests.'))); }; });
 document.addEventListener('click', e=>{
   const b=e.target.closest('[data-partner]'); if(!b) return; const p=db.partners.find(x=>x.id===b.dataset.partner); if(!p) return;
   const tel=(p.phone||'').replace(/\D/g,'');

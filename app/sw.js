@@ -1,5 +1,5 @@
 // Culture Center app — minimal service worker: cache the shell so the app opens offline.
-const CACHE = 'ccl-app-v17';
+const CACHE = 'ccl-app-v18';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
