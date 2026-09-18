@@ -217,7 +217,12 @@ footer .brand .logo-img{height:34px}
 .gg .vwrap button{position:absolute;inset:0;width:100%;height:100%;border:0;background:linear-gradient(180deg,rgba(11,18,32,0),rgba(11,18,32,.55));cursor:pointer;display:grid;place-items:center}
 .gg .vwrap button::before{content:"";width:72px;height:72px;border-radius:50%;background:#fff;box-shadow:0 10px 40px rgba(0,0,0,.45)}
 .gg .vwrap button::after{content:"";position:absolute;border-left:20px solid #0B1220;border-top:12px solid transparent;border-bottom:12px solid transparent;margin-left:6px}
-.gg .vwrap .vcap{position:absolute;left:18px;bottom:16px;pointer-events:none;font-size:13px;color:#fff}
+.gg .vwrap iframe.bgvid{pointer-events:none;opacity:0;transition:opacity .8s}
+.vwrap.ready iframe.bgvid{opacity:1}
+.vwrap .vtag{position:absolute;right:14px;top:12px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-family:var(--display);padding:6px 10px;border-radius:999px;background:rgba(11,18,32,.7);border:1px solid rgba(255,255,255,.18);color:#fff;pointer-events:none}
+.vwrap:hover button::before{transform:scale(1.06)}
+.vwrap button::before{transition:transform .25s}
+.vwrap .vcap{position:absolute;left:18px;bottom:16px;pointer-events:none;font-size:13px;color:#fff}
 .gg .vwrap .vcap b{display:block;font-family:var(--display);font-size:15px}
 .gg .vwrap .vcap span{color:var(--muted)}
 .perks{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
@@ -544,7 +549,9 @@ footer .legal{border-top-color:var(--light-line);color:#8A94A8}
         <p data-i18n="gg.p">Our office is part of Grow Global, a 2,300+ agent group inside eXp. Membership costs nothing extra and changes no one's split. Everything they run online, we bring into the Center in person.</p>
         <div class="vwrap" id="ggvideo">
           <img src="img/grow-global-poster.jpg" alt="">
-          <button type="button" id="ggplay" aria-label="Play: Why Grow Global"></button>
+          <iframe class="bgvid" src="https://player.vimeo.com/video/850594716?h=5ef8d02366&background=1&autoplay=1&muted=1&loop=1&autopause=0" title="Grow Global preview" loading="lazy" allow="autoplay" tabindex="-1" aria-hidden="true"></iframe>
+          <button type="button" id="ggplay" aria-label="Play with sound: Why Grow Global"></button>
+          <span class="vtag"><span data-i18n="gg.tap">Tap for sound</span></span>
           <div class="vcap"><b data-i18n="gg.vt">Why Grow Global</b><span data-i18n="gg.vs">Stephanie Gilezan · 4 min</span></div>
         </div>
         <div class="perks">
@@ -772,7 +779,7 @@ footer .legal{border-top-color:var(--light-line);color:#8A94A8}
     'net.eyebrow':'Nuestra red','net.title':'Conectados con dos de las comunidades más fuertes de eXp','net.lead':'El Culture Center es donde la capacitación de Grow Global y la comunidad de eXp Latino se viven en persona, en Louisville.',
     'gg.title':'Masterminds semanales, coaching y un calendario de capacitación que nunca para','gg.p':'Nuestra oficina es parte de Grow Global, un grupo de más de 2,300 agentes dentro de eXp. Ser miembro no cuesta nada extra y no cambia la comisión de nadie. Todo lo que ellos hacen en línea, nosotros lo traemos al Center en persona.',
     'gg.vt':'Por qué Grow Global','gg.vs':'Stephanie Gilezan · 4 min · en inglés',
-    'gg.k1':'Masterminds semanales','gg.k1s':'Cómo crecer y escalar tu negocio con el grupo','gg.k2':'Coaching y mentoría','gg.k2s':'Continuo, no una sola llamada de bienvenida','gg.k3':'Onboarding de guante blanco','gg.k3s':'Un concierge acompaña a los agentes nuevos en la transición','gg.k4':'Herramientas y marketing','gg.k4s':'Apoyo de diseño gráfico, kits para compradores y vendedores, aplicaciones de IA','gg.cta':'Visita Grow Global →',
+    'gg.k1':'Masterminds semanales','gg.k1s':'Cómo crecer y escalar tu negocio con el grupo','gg.k2':'Coaching y mentoría','gg.k2s':'Continuo, no una sola llamada de bienvenida','gg.k3':'Onboarding de guante blanco','gg.k3s':'Un concierge acompaña a los agentes nuevos en la transición','gg.k4':'Herramientas y marketing','gg.k4s':'Apoyo de diseño gráfico, kits para compradores y vendedores, aplicaciones de IA','gg.tap':'Toca para escuchar','gg.cta':'Visita Grow Global →',
     'lat.title':'Una comunidad nacional de agentes latinos, con sede local aquí','lat.p':'eXp Latino conecta a agentes hispanos y latinos de toda la compañía. Nuestro fundador es miembro activo, y el Center recibe sus reuniones de Louisville, en español y en inglés.',
     'lat.stat':'eXp Realty es la corredora #1 del NAHREP Top 250 de 2026, con 146 agentes y equipos reconocidos, más que cualquier otra corredora.',
     'lat.l1':'Enlaces y eventos de eXp Latino','lat.l3':'Grupo eXp Latino en el hub','lat.l3s':'solo agentes','lat.foot':'También es la casa de los eventos del capítulo NAHREP Louisville. Mira Aliados más abajo.',
@@ -813,6 +820,8 @@ footer .legal{border-top-color:var(--light-line);color:#8A94A8}
   if (saved === 'es') apply('es');
 
   // Grow Global video: swap poster for the Vimeo player on click
+  var ggbg = document.querySelector('#ggvideo iframe.bgvid');
+  if (ggbg) ggbg.addEventListener('load', function(){ setTimeout(function(){ document.getElementById('ggvideo').classList.add('ready'); }, 1200); });
   var ggplay = document.getElementById('ggplay');
   if (ggplay) ggplay.addEventListener('click', function(){
     var box = document.getElementById('ggvideo');
