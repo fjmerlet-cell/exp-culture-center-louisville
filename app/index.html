@@ -44,6 +44,9 @@ input,select,textarea{font:inherit}
 .avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--violet));display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:13px;flex:none;color:#fff}
 .avatar.lg{width:64px;height:64px;font-size:22px}
 .avatar.sm{width:28px;height:28px;font-size:11px}
+.avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
+.avatar.edit{position:relative;cursor:pointer}
+.avatar.edit::after{content:"✎";position:absolute;right:-2px;bottom:-2px;width:22px;height:22px;border-radius:50%;background:var(--blue);color:#fff;font-size:12px;display:grid;place-items:center;border:2px solid var(--surface)}
 .eyebrow{font-family:var(--display);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .eyebrow.coral{color:var(--coral)}
 .sec{margin-top:22px}
@@ -273,7 +276,7 @@ input,select,textarea{font:inherit}
 <!-- ===== MORE / SETTINGS ===== -->
 <section class="screen" id="s-more">
   <div class="top"><h1 data-i18n="more.title">You</h1><div class="lang" id="lang"><button data-lang="en" aria-pressed="true">EN</button><button data-lang="es" aria-pressed="false">ES</button></div></div>
-  <div class="card" style="display:flex;gap:14px;align-items:center"><div class="avatar lg" id="m-av">B</div><div><b id="m-name" style="font-family:var(--display);font-size:18px">Brenda</b><div style="color:var(--muted);font-size:13px" id="m-email"></div><div class="chips" id="m-chips"></div></div></div>
+  <div class="card" style="display:flex;gap:14px;align-items:center"><div class="avatar lg edit" id="m-av" title="Change photo">B</div><input type="file" id="m-file" accept="image/*" hidden><div><b id="m-name" style="font-family:var(--display);font-size:18px">Brenda</b><div style="color:var(--muted);font-size:13px" id="m-email"></div><div class="chips" id="m-chips"></div></div></div>
   <div class="sec"><div class="sec-h"><h2 data-i18n="more.notif">Notifications</h2></div>
     <div class="card" style="padding:0 16px">
       <div class="toggle"><div><b data-i18n="n1">Booking confirmations</b><small data-i18n="n1s">When a room is booked or released</small></div><button class="sw" role="switch" aria-checked="true" data-n="book"></button></div>
@@ -419,6 +422,14 @@ function openSheet(html){ $('#sheet-body').innerHTML=html; $('#sheet').classList
 function closeSheet(){ $('#sheet').classList.remove('open'); $('#sheet-bg').classList.remove('open'); }
 $('#sheet-bg').addEventListener('click', closeSheet);
 function initials(n){ return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
+function avatarHTML(m, cls){ const mm = m.full_name ? m : m; const name=mm.full_name||mm.name||''; return `<div class="avatar ${cls||''}">${mm.avatar_url?`<img src="${esc(mm.avatar_url)}" alt="">`:initials(name)}</div>`; }
+function calButtons(o){
+  const s=new Date(o.start), e=new Date(o.end); const f=d=>d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+  const g=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(o.title)}&dates=${f(s)}/${f(e)}&location=${encodeURIComponent(o.location||'')}&details=${encodeURIComponent(o.desc||'')}`;
+  const ics=`BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Culture Center Louisville//EN\nBEGIN:VEVENT\nUID:${o.uid||Date.now()}@expculturecenterlouisville.com\nDTSTAMP:${f(new Date())}\nDTSTART:${f(s)}\nDTEND:${f(e)}\nSUMMARY:${o.title}\nLOCATION:${o.location||''}\nDESCRIPTION:${(o.desc||'').replace(/\n/g,' ')}\nEND:VEVENT\nEND:VCALENDAR`;
+  const icsHref='data:text/calendar;charset=utf-8,'+encodeURIComponent(ics);
+  return `<a class="btn btn-ghost" href="${icsHref}" download="${esc(o.title.replace(/\W+/g,'-'))}.ics">${state.lang==='es'?'Apple / Outlook':'Apple / Outlook'}</a><a class="btn btn-ghost" href="${g}" target="_blank" rel="noopener">Google Calendar</a>`;
+}
 function isAdmin(){ return store.me().role==='admin'; }
 
 /* ==========================================================================
@@ -501,7 +512,7 @@ function meN(){ return normMember(db.me); }
 
 function renderHome(){
   const me=meN();
-  $('#h-name').textContent=me.name.split(' ')[0]; $('#h-av').textContent=me.initials;
+  $('#h-name').textContent=me.name.split(' ')[0]; $('#h-av').outerHTML=avatarHTML(db.me).replace('class="avatar','id="h-av" class="avatar');
   $('#h-date').textContent=new Date().toLocaleDateString(loc(),{weekday:'long',month:'long',day:'numeric'});
   const next=store.events().map(normEvent).filter(e=>new Date(e.when)>new Date()).slice(0,2);
   $('#h-next').innerHTML = next.map(eventRow).join('') || `<div class="card" style="color:var(--muted);font-size:14px">${state.lang==='es'?'Todavía no hay eventos programados. En cuanto se publique uno, aparece aquí.':'No events on the calendar yet. As soon as one is posted, it shows up here.'}${isAdmin()?` <button data-adm="event" style="color:var(--blue);font-weight:600">${state.lang==='es'?'Publicar el primero →':'Post the first one →'}</button>`:''}</div>`;
@@ -537,13 +548,13 @@ document.addEventListener('click', e=>{
     <p class="meta">${fmtDay(ev.when)} · ${fmtTime(ev.when)} · ${ev.dur} min · ${esc(ev.where)}</p>
     <p class="body">${esc(L(ev,'desc'))}</p>
     <p class="meta" style="margin-top:12px">${ev.going} ${t('ev.going')}</p>
-    <div class="actions"><button class="btn ${mine?'btn-ghost':'btn-primary'}" id="rsvp">${mine?t('ev.cancel'):t('ev.rsvp')}</button><button class="btn btn-ghost" id="ics">${t('ev.cal')}</button></div>
+    <div class="actions"><button class="btn ${mine?'btn-ghost':'btn-primary'}" id="rsvp">${mine?t('ev.cancel'):t('ev.rsvp')}</button></div>
+    <p class="meta" style="margin-top:14px">${t('ev.cal')}</p><div class="actions" style="margin-top:8px">${calButtons({title:ev.title,start:ev.when,end:new Date(new Date(ev.when).getTime()+ev.dur*60000),location:ev.where,desc:ev.desc,uid:ev.id})}</div>
     ${isAdmin()?`<p class="note" style="text-align:center"><button id="ev-del" style="color:var(--red);font-weight:600">${state.lang==='es'?'Eliminar evento':'Delete event'}</button></p>`:''}`);
   $('#rsvp').onclick=async()=>{
     try{ if(mine) await q(sb.from('rsvps').delete().match({event_id:ev.id,member_id:db.me.id}),'unrsvp'); else await q(sb.from('rsvps').insert({event_id:ev.id,member_id:db.me.id}),'rsvp'); }catch(e){ toast(e.message); return; }
     db.rsvps = await q(sb.from('rsvps').select('*'),'rsvps'); closeSheet(); renderAll(); toast(mine?t('toast.unrsvp'):t('toast.rsvp'));
   };
-  $('#ics').onclick=()=>{ const s=new Date(ev.when), en=new Date(s.getTime()+ev.dur*60000); const f=d=>d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,''); const ics=`BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nDTSTART:${f(s)}\nDTEND:${f(en)}\nSUMMARY:${ev.title}\nLOCATION:${ev.where}\nDESCRIPTION:${(ev.desc||'').replace(/\n/g,' ')}\nEND:VEVENT\nEND:VCALENDAR`; const a=document.createElement('a'); a.href='data:text/calendar;charset=utf-8,'+encodeURIComponent(ics); a.download=ev.title.replace(/\W+/g,'-')+'.ics'; document.body.appendChild(a); a.click(); a.remove(); };
   const del=$('#ev-del'); if (del) del.onclick=async()=>{ if(!confirm(state.lang==='es'?'¿Eliminar este evento?':'Delete this event?')) return; await q(sb.from('events').delete().eq('id',ev.id),'del'); closeSheet(); await loadAll(); renderAll(); };
 });
 
@@ -555,11 +566,19 @@ function roomStatus(r){
 function renderSpaces(){
   $('#sp-list').innerHTML = store.rooms().map(normRoom).map(r=>`<button class="item" data-room="${r.id}" ${r.soon?'disabled style="opacity:.6"':''}><div class="ic ${r.ic}">${r.sym}</div><div class="tx"><b>${esc(L(r,'name'))}</b><small>${esc(L(r,'meta')||'')}</small></div><span class="r">${roomStatus(r)}</span></button>`).join('');
   const mine=store.bookings().filter(b=>b.member_id===db.me.id && new Date(b.ends_at)>new Date()).sort((a,b)=>a.starts_at.localeCompare(b.starts_at));
-  $('#sp-mine').innerHTML = mine.map(b=>{ const r=normRoom(store.rooms().find(x=>x.id===b.room_id)); return `<div class="item"><div class="ic ${r.ic}">${r.sym}</div><div class="tx"><b>${esc(L(r,'name'))}</b><small>${fmtDay(b.starts_at)} · ${fmtTime(b.starts_at)}–${fmtTime(b.ends_at)}</small></div><button class="btn btn-ghost btn-sm" data-release="${b.id}">${t('sp.release')}</button></div>`; }).join('') || `<div class="empty">${t('sp.none')}</div>`;
+  $('#sp-mine').innerHTML = mine.map(b=>{ const r=normRoom(store.rooms().find(x=>x.id===b.room_id)); return `<button class="item" data-bcal="${b.id}"><div class="ic ${r.ic}">${r.sym}</div><div class="tx"><b>${esc(L(r,'name'))}</b><small>${fmtDay(b.starts_at)} · ${fmtTime(b.starts_at)}–${fmtTime(b.ends_at)}</small></div><span class="r">›</span></button>`; }).join('') || `<div class="empty">${t('sp.none')}</div>`;
 }
 function hourLabel(h){ const d=new Date(); d.setHours(h,0,0,0); return d.toLocaleTimeString(loc(),{hour:'numeric'}); }
+function bookingCalSheet(b){
+  const r=normRoom(store.rooms().find(x=>x.id===b.room_id));
+  openSheet(`<h2>${esc(L(r,'name'))}</h2><p class="meta">${fmtDay(b.starts_at)} · ${fmtTime(b.starts_at)}–${fmtTime(b.ends_at)}</p>
+    <p class="meta" style="margin-top:14px">${state.lang==='es'?'Agregar a tu calendario':'Add to your calendar'}</p>
+    <div class="actions" style="margin-top:8px">${calButtons({title:(state.lang==='es'?'Reserva: ':'Room: ')+L(r,'name')+' · Culture Center',start:b.starts_at,end:b.ends_at,location:'eXp Culture Center Louisville, 8923 Stone Green Way Suite 200',desc:L(r,'meta')||'',uid:b.id})}</div>
+    <p class="note" style="text-align:center;margin-top:18px"><button data-release="${b.id}" style="color:var(--red);font-weight:600">${t('sp.release')}</button></p>`);
+}
 document.addEventListener('click', async e=>{
-  const rel=e.target.closest('[data-release]'); if (rel){ try{ await q(sb.from('bookings').delete().eq('id',rel.dataset.release),'release'); }catch(err){ toast(err.message); return; } await loadAll(); renderAll(); toast(t('toast.released')); return; }
+  const bc=e.target.closest('[data-bcal]'); if (bc){ const b=store.bookings().find(x=>x.id===bc.dataset.bcal); if(b) bookingCalSheet(b); return; }
+  const rel=e.target.closest('[data-release]'); if (rel){ try{ await q(sb.from('bookings').delete().eq('id',rel.dataset.release),'release'); }catch(err){ toast(err.message); return; } closeSheet(); await loadAll(); renderAll(); toast(t('toast.released')); return; }
   const b=e.target.closest('[data-room]'); if(!b) return;
   const r=normRoom(store.rooms().find(x=>x.id===b.dataset.room)); let day=0, picked=null;
   const days=[0,1,2,3,4,5,6].map(i=>{ const d=new Date(); d.setDate(d.getDate()+i); return {i, dow:d.toLocaleDateString(loc(),{weekday:'short'}), n:d.getDate()}; });
@@ -574,9 +593,9 @@ document.addEventListener('click', async e=>{
     $$('[data-day]').forEach(x=>x.onclick=()=>{ day=+x.dataset.day; picked=null; draw(); });
     $$('.slot:not(.busy):not(.mine)').forEach(x=>x.onclick=()=>{ picked=+x.dataset.h; draw(); });
     $('#book').onclick=async()=>{ const s=slotStart(picked); const en=new Date(s.getTime()+36e5);
-      try{ await q(sb.from('bookings').insert({room_id:r.id, member_id:db.me.id, starts_at:s.toISOString(), ends_at:en.toISOString()}),'book'); }
+      let made; try{ made=await q(sb.from('bookings').insert({room_id:r.id, member_id:db.me.id, starts_at:s.toISOString(), ends_at:en.toISOString()}).select().single(),'book'); }
       catch(err){ toast(/exclusion|overlap|conflict/i.test(err.message)?(state.lang==='es'?'Ese horario ya está reservado.':'That time was just taken.'):err.message); await loadAll(); draw(); return; }
-      await loadAll(); closeSheet(); renderAll(); toast(t('toast.booked')); };
+      await loadAll(); renderAll(); toast(t('toast.booked')); bookingCalSheet(made); };
   }
   draw();
 });
@@ -584,7 +603,7 @@ document.addEventListener('click', async e=>{
 let chFilter='channels', openThread=null, rt=null;
 function renderChat(){
   if (chFilter==='channels') $('#ch-list').innerHTML = store.channels().map(c=>{ const u=store.unread(c.id); return `<button class="item" data-thread="${c.id}"><div class="ic ${c.icon||'b'}">#</div><div class="tx"><b>${esc(c.name)}</b><small>${esc(L(c,'description')||'')}</small></div>${u?`<span class="r"><span class="pill blue">${u}</span></span>`:''}</button>`; }).join('');
-  else $('#ch-list').innerHTML = store.dms().map(d=>{ const m=store.member(d.with); if(!m) return ''; const mm=normMember(m); const last=store.messages(d.id).slice(-1)[0]; const u=store.unread(d.id); return `<button class="item" data-thread="${d.id}"><div class="avatar">${mm.initials}</div><div class="tx"><b>${esc(mm.name)}</b><small>${esc(last?last.body:'')}</small></div>${u?`<span class="r"><span class="pill blue">${u}</span></span>`:''}</button>`; }).join('') || `<div class="empty">${state.lang==='es'?'Todavía no tienes mensajes directos. Abre el Directorio y toca a alguien.':'No direct messages yet. Open the Directory and tap someone.'}</div>`;
+  else $('#ch-list').innerHTML = store.dms().map(d=>{ const m=store.member(d.with); if(!m) return ''; const mm=normMember(m); const last=store.messages(d.id).slice(-1)[0]; const u=store.unread(d.id); return `<button class="item" data-thread="${d.id}">${avatarHTML(mm)}<div class="tx"><b>${esc(mm.name)}</b><small>${esc(last?last.body:'')}</small></div>${u?`<span class="r"><span class="pill blue">${u}</span></span>`:''}</button>`; }).join('') || `<div class="empty">${state.lang==='es'?'Todavía no tienes mensajes directos. Abre el Directorio y toca a alguien.':'No direct messages yet. Open the Directory and tap someone.'}</div>`;
 }
 $$('#ch-seg button').forEach(b=>b.addEventListener('click',()=>{ $$('#ch-seg button').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); chFilter=b.dataset.f; renderChat(); }));
 document.addEventListener('click', e=>{ const b=e.target.closest('[data-thread]'); if (b) openThreadView(b.dataset.thread); });
@@ -627,12 +646,12 @@ function renderDirectory(){
   const qv=($('#dir-q').value||'').toLowerCase();
   const list=store.members().map(normMember).filter(m=>m.id!==db.me.id).filter(m=>!qv || [m.name,m.title||'',...(m.areas||[]),...(m.spec||[]),...(m.langs||[]).map(l=>l==='es'?'español spanish':'english')].join(' ').toLowerCase().includes(qv));
   $('#dir-count').textContent=`${store.members().length} ${t('dir.members')}`;
-  $('#dir-list').innerHTML = list.map(m=>`<button class="item" data-member="${m.id}"><div class="avatar">${m.initials}</div><div class="tx"><b>${esc(m.name)}</b><small>${esc(m.title||'')}${m.areas&&m.areas.length?' · '+esc(m.areas.join(', ')):''}</small></div><span class="r">${(m.langs||[]).map(l=>l.toUpperCase()).join(' · ')}</span></button>`).join('') || `<div class="empty">${t('ev.empty')}</div>`;
+  $('#dir-list').innerHTML = list.map(m=>`<button class="item" data-member="${m.id}">${avatarHTML(m)}<div class="tx"><b>${esc(m.name)}</b><small>${esc(m.title||'')}${m.areas&&m.areas.length?' · '+esc(m.areas.join(', ')):''}</small></div><span class="r">${(m.langs||[]).map(l=>l.toUpperCase()).join(' · ')}</span></button>`).join('') || `<div class="empty">${t('ev.empty')}</div>`;
 }
 $('#dir-q').addEventListener('input', renderDirectory);
 document.addEventListener('click', e=>{
   const b=e.target.closest('[data-member]'); if(!b) return; const m=normMember(store.member(b.dataset.member));
-  openSheet(`<div style="display:flex;gap:14px;align-items:center"><div class="avatar lg">${m.initials}</div><div><h2>${esc(m.name)}</h2><p class="meta">${esc(m.title||'')}</p></div></div>
+  openSheet(`<div style="display:flex;gap:14px;align-items:center">${avatarHTML(m,'lg')}<div><h2>${esc(m.name)}</h2><p class="meta">${esc(m.title||'')}</p></div></div>
     <div class="chips" style="margin-top:14px">${(m.langs||[]).map(l=>`<span>${l==='es'?'Español':'English'}</span>`).join('')}${(m.areas||[]).map(a=>`<span>${esc(a)}</span>`).join('')}${(m.spec||[]).map(a=>`<span>${esc(a)}</span>`).join('')}</div>
     <div class="actions">${m.phone?`<a class="btn btn-ghost" href="tel:${m.phone.replace(/\D/g,'')}">${t('dir.call')}</a><a class="btn btn-ghost" href="sms:${m.phone.replace(/\D/g,'')}">${t('dir.text')}</a>`:''}${m.email?`<a class="btn btn-ghost" href="mailto:${m.email}">${t('dir.email')}</a>`:''}<button class="btn btn-primary" id="dm-go">${t('dir.dm')}</button></div>
     ${isAdmin()?`<p class="note" style="text-align:center;margin-top:16px"><button id="mb-edit" style="color:var(--blue);font-weight:600">${state.lang==='es'?'Editar miembro':'Edit member'}</button> · <button id="mb-rm" style="color:var(--red);font-weight:600">${state.lang==='es'?'Quitar acceso':'Remove access'}</button></p>`:''}`);
@@ -642,12 +661,35 @@ document.addEventListener('click', e=>{
 });
 
 function renderMore(){
-  const me=meN(); $('#m-name').textContent=me.name; $('#m-av').textContent=me.initials; $('#m-email').textContent=me.email;
+  const me=meN(); $('#m-name').textContent=me.name; $('#m-av').innerHTML = db.me.avatar_url ? `<img src="${esc(db.me.avatar_url)}" alt="">` : me.initials; $('#m-email').textContent=me.email;
   $('#m-chips').innerHTML=(me.langs||[]).map(l=>`<span>${l==='es'?'Español':'English'}</span>`).join('')+(me.spec||[]).map(s=>`<span>${esc(s)}</span>`).join('')+`<span style="color:var(--blue);cursor:pointer" id="edit-me">${state.lang==='es'?'Editar perfil':'Edit profile'}</span>`;
   $('#edit-me').onclick=()=>adminForm('member', me, true);
   $('#admin-sec').hidden=!isAdmin();
   const prefs=db.me.prefs||{};
   $$('.sw').forEach(s=>s.setAttribute('aria-checked', String(!!prefs[s.dataset.n])));
+}
+$('#m-av').addEventListener('click', ()=>$('#m-file').click());
+$('#m-file').addEventListener('change', async ()=>{
+  const file=$('#m-file').files[0]; if(!file) return;
+  toast(state.lang==='es'?'Subiendo foto…':'Uploading photo…');
+  try{
+    const blob=await resizeImage(file, 512);
+    const path=`${db.me.id}.jpg`;
+    const up=await sb.storage.from('avatars').upload(path, blob, { upsert:true, contentType:'image/jpeg', cacheControl:'3600' });
+    if (up.error) throw up.error;
+    const url=sb.storage.from('avatars').getPublicUrl(path).data.publicUrl + '?v=' + Date.now();
+    await q(sb.from('members').update({avatar_url:url}).eq('id',db.me.id),'avatar');
+    db.me.avatar_url=url; await loadAll(); renderAll(); toast(state.lang==='es'?'Foto actualizada':'Photo updated');
+  }catch(err){ toast(err.message||'Upload failed'); }
+  $('#m-file').value='';
+});
+function resizeImage(file, max){
+  return new Promise((res,rej)=>{ const img=new Image(); const u=URL.createObjectURL(file);
+    img.onload=()=>{ const sc=Math.min(1, max/Math.max(img.width,img.height)); const w=Math.round(img.width*sc), h=Math.round(img.height*sc); const side=Math.min(w,h);
+      const c=document.createElement('canvas'); c.width=side; c.height=side; const ctx=c.getContext('2d');
+      ctx.drawImage(img,(img.width-img.height>0?(img.width-img.height)/2:0),(img.height-img.width>0?(img.height-img.width)/2:0),Math.min(img.width,img.height),Math.min(img.width,img.height),0,0,side,side);
+      URL.revokeObjectURL(u); c.toBlob(b=>b?res(b):rej(new Error('Could not process image')),'image/jpeg',.85); };
+    img.onerror=()=>rej(new Error('Could not read image')); img.src=u; });
 }
 $$('.sw').forEach(s=>s.addEventListener('click', async ()=>{ const prefs={...(db.me.prefs||{})}; prefs[s.dataset.n]=!prefs[s.dataset.n]; db.me.prefs=prefs; renderMore(); await sb.from('members').update({prefs}).eq('id',db.me.id); }));
 $$('#lang button').forEach(b=>b.addEventListener('click',()=>{ state.lang=b.dataset.lang; save(); applyLang(); }));
