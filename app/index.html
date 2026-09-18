@@ -237,6 +237,7 @@ input,select,textarea{font:inherit}
   </div>
   <div class="sec-h" style="margin-top:22px" id="h-ann-h"><h2 data-i18n="home.ann">Announcements</h2><span id="h-ann-n" style="font-size:12px;color:var(--muted)"></span></div>
   <div id="h-ann"></div>
+  <div id="h-onb"></div>
   <div class="sec-h" style="margin-top:22px"><h2 data-i18n="home.next">Next up</h2><button data-go="events" data-i18n="home.all">All events</button></div>
   <div id="h-next"></div>
   <div class="grid2">
@@ -362,7 +363,7 @@ try { const s=JSON.parse(localStorage.getItem(LS_KEY)||'null'); if (s && s.lang)
 function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({lang:state.lang})); }catch(e){} }
 
 // In-memory cache, refreshed from the database
-const db = { me:null, members:[], rooms:[], events:[], rsvps:[], bookings:[], spotlights:[], channels:[], msgs:{}, lastSeen:{}, resources:[], checkins:[], partners:[], anns:[], annReads:[] };
+const db = { me:null, members:[], rooms:[], events:[], rsvps:[], bookings:[], spotlights:[], channels:[], msgs:{}, lastSeen:{}, resources:[], checkins:[], partners:[], anns:[], annReads:[], obSteps:[], obProg:[], pushSubs:[] };
 try { db.lastSeen = JSON.parse(localStorage.getItem('ccl-seen')||'{}'); } catch(e){}
 function markSeen(id){ db.lastSeen[id]=new Date().toISOString(); try{ localStorage.setItem('ccl-seen', JSON.stringify(db.lastSeen)); }catch(e){} }
 
@@ -371,7 +372,7 @@ function dmKey(a,b){ return [a,b].sort().join(':'); }
 
 async function loadAll(){
   const now = new Date(); const from = new Date(now); from.setDate(from.getDate()-1); const to = new Date(now); to.setDate(to.getDate()+35);
-  const [members, rooms, events, rsvps, bookings, spotlights, channels, recent, resources, checkins, partners, anns, annReads] = await Promise.all([
+  const [members, rooms, events, rsvps, bookings, spotlights, channels, recent, resources, checkins, partners, anns, annReads, obSteps, obProg, pushSubs] = await Promise.all([
     q(sb.from('members').select('*').eq('active',true).order('full_name'),'members'),
     q(sb.from('rooms').select('*').order('sort'),'rooms'),
     q(sb.from('events').select('*').gte('starts_at', new Date(now.getTime()-90*864e5).toISOString()).order('starts_at'),'events'),
@@ -384,9 +385,12 @@ async function loadAll(){
     sb.from('checkins').select('*').then(r=>r.data||[]),
     sb.from('partners').select('*').eq('active',true).order('sort').order('name').then(r=>r.data||[]),
     sb.from('announcements').select('*').order('pinned',{ascending:false}).order('created_at',{ascending:false}).limit(30).then(r=>r.data||[]),
-    sb.from('announcement_reads').select('*').then(r=>r.data||[])
+    sb.from('announcement_reads').select('*').then(r=>r.data||[]),
+    sb.from('onboarding_steps').select('*').eq('active',true).order('sort').then(r=>r.data||[]),
+    sb.from('onboarding_progress').select('*').then(r=>r.data||[]),
+    sb.from('push_subscriptions').select('id').then(r=>r.data||[])
   ]);
-  Object.assign(db,{members,rooms,events,rsvps,bookings,spotlights,channels,resources,checkins,partners,anns,annReads});
+  Object.assign(db,{members,rooms,events,rsvps,bookings,spotlights,channels,resources,checkins,partners,anns,annReads,obSteps,obProg,pushSubs});
   db.msgs={}; recent.reverse().forEach(m=>{ const k=m.channel_id||m.dm_key; (db.msgs[k]=db.msgs[k]||[]).push(m); });
 }
 
@@ -568,6 +572,7 @@ function renderHome(){
   $('#h-open').textContent=openCount;
   $('#h-rooms').innerHTML = roomsTodayHTML();
   renderAnnouncements();
+  renderOnboarding();
   $('#h-unread').textContent=store.channels().reduce((n,c)=>n+store.unread(c.id),0)+store.dms().reduce((n,d)=>n+store.unread(d.id),0);
   const sp=store.spotlights().map(normSpot);
   $('#h-spot').innerHTML = sp.map((s,i)=> i===0
@@ -634,6 +639,23 @@ async function renderAttendance(ev){
 function todayTimes(r){ const d0=new Date(); d0.setHours(0,0,0,0); const d1=new Date(d0.getTime()+864e5);
   const ts=store.bookings().filter(b=>b.room_id===r.id && new Date(b.starts_at)>=d0 && new Date(b.starts_at)<d1).sort((a,b)=>a.starts_at.localeCompare(b.starts_at)).map(b=>fmtTime(b.starts_at).replace(':00','')+'–'+fmtTime(b.ends_at).replace(':00',''));
   return ts.length?`<br><span style="color:var(--amber)">${state.lang==='es'?'Hoy':'Today'}: ${ts.join(', ')}</span>`:''; }
+function obAuto(step){ const me=db.me; switch(step.auto){ case 'photo': return !!me.avatar_url; case 'push': return db.pushSubs.length>0; case 'rsvp': return db.rsvps.some(r=>r.member_id===me.id); case 'checkin': return db.checkins.some(c=>c.member_id===me.id); case 'booking': return db.bookings.some(b=>b.member_id===me.id); default: return false; } }
+function obDone(step){ return db.obProg.some(p=>p.member_id===db.me.id&&p.step_id===step.id) || obAuto(step); }
+async function renderOnboarding(){
+  const box=$('#h-onb'); if(!db.me.onboarding||!db.obSteps.length){ box.innerHTML=''; return; }
+  const es=state.lang==='es'; const steps=db.obSteps; const done=steps.filter(obDone); const pct=Math.round(done.length/steps.length*100);
+  // auto-record auto-completed steps so admins can see them
+  for(const st of steps){ if(st.auto&&obAuto(st)&&!db.obProg.some(p=>p.member_id===db.me.id&&p.step_id===st.id)){ db.obProg.push({member_id:db.me.id,step_id:st.id}); sb.from('onboarding_progress').insert({member_id:db.me.id,step_id:st.id}).then(()=>{}); } }
+  const mentor=db.me.mentor_id?store.members().find(m=>m.id===db.me.mentor_id):null;
+  box.innerHTML=`<div class="hero-card" style="margin-top:22px;background:linear-gradient(135deg,rgba(255,90,60,.28),rgba(245,166,35,.22))"><span class="eyebrow" style="color:#FFD9CF">${es?'Tus primeras semanas en el Center':'Your first weeks at the Center'}</span>
+    <b>${pct===100?(es?'¡Lo lograste! Checklist completo.':'You did it — checklist complete!'):`${done.length} ${es?'de':'of'} ${steps.length} ${es?'listos':'done'}`}</b>
+    <div style="height:8px;border-radius:999px;background:rgba(255,255,255,.15);margin-top:10px;overflow:hidden"><div style="height:100%;width:${pct}%;background:#fff;border-radius:999px;transition:width .4s"></div></div>
+    ${mentor?`<small style="margin-top:10px">${es?'Tu mentor:':'Your mentor:'} <b style="display:inline;font-size:13px">${esc(mentor.full_name)}</b> · <button data-ob-dm="${mentor.id}" style="color:#fff;text-decoration:underline">${es?'Enviar mensaje':'Message'}</button></small>`:''}
+    <div style="margin-top:12px;display:grid;gap:8px">${steps.map(st=>{ const d=obDone(st); return `<div class="toggle" style="background:rgba(11,18,32,.35);border-radius:12px;padding:10px 12px;border:0"><div style="flex:1"><b style="font-size:14px;${d?'text-decoration:line-through;opacity:.7':''}">${d?'✓ ':''}${esc(L(st,'title'))}</b>${d?'':`<small>${esc(L(st,'description')||'')}</small>`}</div>${d?'':`<div style="display:flex;gap:6px;flex:none">${st.go?`<button class="btn btn-sm" data-ob-go="${esc(st.go)}" style="background:#fff;color:#0B1220">${es?'Ir':'Go'}</button>`:''}${st.auto?'':`<button class="btn btn-sm btn-ghost" data-ob-done="${st.id}" style="border-color:rgba(255,255,255,.4)">${es?'Listo':'Done'}</button>`}</div>`}</div>`; }).join('')}</div></div>`;
+  $$('[data-ob-go]').forEach(b=>b.onclick=()=>{ const g=b.dataset.obGo; if(/^https?:/.test(g)) window.open(g,'_blank'); else show(g); });
+  $$('[data-ob-done]').forEach(b=>b.onclick=async()=>{ await sb.from('onboarding_progress').insert({member_id:db.me.id,step_id:b.dataset.obDone}); db.obProg.push({member_id:db.me.id,step_id:b.dataset.obDone}); renderOnboarding(); toast(es?'¡Listo!':'Nice — done.'); });
+  const dm=$('[data-ob-dm]'); if(dm) dm.onclick=()=>{ chFilter='dm'; $$('#ch-seg button').forEach(x=>x.setAttribute('aria-pressed', String(x.dataset.f==='dm'))); show('chat'); openThreadView(dmKey(db.me.id,dm.dataset.obDm)); };
+}
 function annRead(id){ return db.annReads.some(r=>r.announcement_id===id && r.member_id===db.me.id); }
 function annReaders(id){ return db.annReads.filter(r=>r.announcement_id===id); }
 function renderAnnouncements(){
@@ -1015,6 +1037,7 @@ function adminForm(kind, m, self){
     <div class="row"><div class="field"><label>${state.lang==='es'?'Idiomas':'Languages'}</label><select id="f-langs"><option value="en" ${m&&!(m.langs||[]).includes('es')?'selected':''}>English</option><option value="en,es" ${m&&(m.langs||[]).includes('es')?'selected':''}>English + Español</option></select></div>${!self?`<div class="field"><label>${state.lang==='es'?'Rol':'Role'}</label><select id="f-role"><option value="member" ${m&&m.role==='member'?'selected':''}>Member</option><option value="admin" ${m&&m.role==='admin'?'selected':''}>Admin</option></select></div>`:''}</div>
     <div class="field"><label>${state.lang==='es'?'Zonas (separadas por coma)':'Neighborhoods (comma separated)'}</label><input id="f-areas" value="${m?esc((m.areas||[]).join(', ')):''}"></div>
     <div class="field"><label>${state.lang==='es'?'Especialidades (separadas por coma)':'Specialties (comma separated)'}</label><input id="f-spec" value="${m?esc((m.specialties||[]).join(', ')):''}"></div>
+    ${!self?`<div class="row"><div class="field"><label>${state.lang==='es'?'Checklist de agente nuevo':'New-agent checklist'}</label><select id="f-onb"><option value="">${state.lang==='es'?'No mostrar':'Off'}</option><option value="1" ${m&&m.onboarding?'selected':''}>${state.lang==='es'?'Mostrar en su Inicio':'Show on their Home'}</option></select></div><div class="field"><label>${state.lang==='es'?'Mentor':'Mentor'}</label><select id="f-mentor"><option value="">—</option>${store.members().filter(x=>!m||x.id!==m.id).map(x=>`<option value="${x.id}" ${m&&m.mentor_id===x.id?'selected':''}>${esc(x.full_name)}</option>`).join('')}</select></div></div>`:''}
     <div class="actions"><button class="btn btn-primary" id="f-save">${m?(state.lang==='es'?'Guardar':'Save'):t('adm.save')}</button></div>`);
   $('#f-save').onclick=async()=>{
     try{
@@ -1027,7 +1050,7 @@ function adminForm(kind, m, self){
       if (kind==='member'){ const name=$('#f-name').value.trim(), email=$('#f-email').value.trim().toLowerCase(); if(!name||(!self&&!email)) return;
         const split=v=>v.split(',').map(x=>x.trim()).filter(Boolean);
         const row={ full_name:name, phone:$('#f-phone').value.trim()||null, title:$('#f-tt').value.trim()||null, langs:$('#f-langs').value.split(','), areas:split($('#f-areas').value), specialties:split($('#f-spec').value) };
-        if (!self){ row.email=email; row.role=$('#f-role').value; }
+        if (!self){ row.email=email; row.role=$('#f-role').value; row.onboarding=!!$('#f-onb').value; row.mentor_id=$('#f-mentor').value||null; if(row.onboarding&&!(m&&m.onboarding)) row.onboarding_started_at=new Date().toISOString(); }
         if (m) await q(sb.from('members').update(row).eq('id',m.id),'member'); else await q(sb.from('members').insert(row),'member');
         if (self){ Object.assign(db.me,row); } }
     }catch(err){ toast(/duplicate|unique/i.test(err.message)?(state.lang==='es'?'Ese correo ya está en la lista.':'That email is already on the list.'):err.message); return; }
