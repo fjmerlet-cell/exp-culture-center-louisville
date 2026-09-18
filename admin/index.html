@@ -70,6 +70,7 @@ td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}td.nw{
     <div class="brand"><img src="../img/exp-logo-white.png" alt=""><div><b>Culture Center</b>Admin dashboard</div></div>
     <nav>
       <button data-p="overview" aria-current="true"><i>◫</i>Overview</button>
+      <button data-p="inquiries"><i>✉</i>Inquiries <span class="pill busy" id="inq-badge" style="margin-left:auto;display:none"></span></button>
       <button data-p="members"><i>☺</i>Members</button>
       <button data-p="events"><i>▦</i>Events</button>
       <button data-p="rooms"><i>⌂</i>Rooms</button>
@@ -92,6 +93,13 @@ td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}td.nw{
         <div class="card"><h3>Members joined <span>last 6 months</span></h3><div id="ch-join"></div></div>
       </div>
       <div class="card" style="margin-top:14px"><h3>Needs attention</h3><div id="attn"></div></div>
+    </section>
+
+    <!-- INQUIRIES -->
+    <section class="page" id="p-inquiries">
+      <div class="top"><div><h1>Inquiries</h1><p>From the "Get involved" form on the website. You and Andy get an email for each one.</p></div><button class="btn" id="inq-csv">⬇ Export CSV</button></div>
+      <div class="tools"><div class="seg" id="inq-seg"><button aria-pressed="true" data-f="new">New</button><button data-f="contacted">Contacted</button><button data-f="closed">Closed</button><button data-f="">All</button></div></div>
+      <div class="card tbl"><table><thead><tr><th>Received</th><th>Who</th><th>I am</th><th>Message</th><th>Status</th><th></th></tr></thead><tbody id="inq-list"></tbody></table></div>
     </section>
 
     <!-- MEMBERS -->
@@ -169,10 +177,10 @@ function closeModal(){ $('#modal').classList.remove('open'); }
 $('#modal').addEventListener('click',e=>{ if(e.target.id==='modal') closeModal(); });
 function csv(name, rows){ const lines=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'})); a.download=name; a.click(); }
 
-const db={me:null,members:[],events:[],rsvps:[],checkins:[],bookings:[],rooms:[],anns:[],annReads:[],partners:[],resources:[],spots:[],codes:[]};
+const db={me:null,inquiries:[],members:[],events:[],rsvps:[],checkins:[],bookings:[],rooms:[],anns:[],annReads:[],partners:[],resources:[],spots:[],codes:[]};
 async function loadAll(){
   const now=new Date(), from=new Date(now.getTime()-120*864e5).toISOString(), to=new Date(now.getTime()+60*864e5).toISOString();
-  const [members,events,rsvps,checkins,bookings,rooms,anns,annReads,partners,resources,spots,codes]=await Promise.all([
+  const [members,events,rsvps,checkins,bookings,rooms,anns,annReads,partners,resources,spots,codes,inquiries]=await Promise.all([
     q(sb.from('members').select('*').order('full_name'),'members'),
     q(sb.from('events').select('*').gte('starts_at',from).order('starts_at'),'events'),
     q(sb.from('rsvps').select('*'),'rsvps'),
@@ -185,8 +193,9 @@ async function loadAll(){
     sb.from('resources').select('*').order('pinned',{ascending:false}).order('sort').then(r=>r.data||[]),
     sb.from('spotlights').select('*').order('created_at',{ascending:false}).limit(20).then(r=>r.data||[]),
     sb.from('event_codes').select('*').then(r=>r.data||[]),
+    sb.from('inquiries').select('*').order('created_at',{ascending:false}).limit(300).then(r=>r.data||[]),
   ]);
-  Object.assign(db,{members,events,rsvps,checkins,bookings,rooms,anns,annReads,partners,resources,spots,codes});
+  Object.assign(db,{members,events,rsvps,checkins,bookings,rooms,anns,annReads,partners,resources,spots,codes,inquiries});
 }
 const active=()=>db.members.filter(m=>m.active);
 const roomName=id=>(db.rooms.find(r=>r.id===id)||{}).name||id;
@@ -216,9 +225,11 @@ $('#signout').onclick=async()=>{ await sb.auth.signOut(); location.reload(); };
 sb.auth.onAuthStateChange((ev,session)=>{ if(ev==='SIGNED_IN'||ev==='INITIAL_SESSION') resolve(session); if(ev==='SIGNED_OUT') showAuth(); });
 
 /* ---------- nav ---------- */
+function goPage(p){ const b=$(`nav [data-p="${p}"]`); if(b) b.click(); }
+window.addEventListener('load',()=>{ const h=location.hash.replace('#',''); if(h) setTimeout(()=>goPage(h),50); });
 $$('nav button').forEach(b=>b.onclick=()=>{ $$('nav button').forEach(x=>x.setAttribute('aria-current','false')); b.setAttribute('aria-current','true'); $$('.page').forEach(p=>p.classList.remove('active')); $('#p-'+b.dataset.p).classList.add('active'); });
 $('#refresh').onclick=async()=>{ await loadAll(); renderAll(); toast('Refreshed'); };
-function renderAll(){ renderOverview(); renderMembers(); renderEvents(); renderRooms(); renderAnns(); renderPartners(); renderResources(); renderSettings(); }
+function renderAll(){ renderInquiries(); renderOverview(); renderMembers(); renderEvents(); renderRooms(); renderAnns(); renderPartners(); renderResources(); renderSettings(); }
 function bars(rows, color){ const max=Math.max(1,...rows.map(r=>r.v)); return rows.length?rows.map(r=>`<div class="bar"><span class="lbl" title="${esc(r.l)}">${esc(r.l)}</span><span class="tr"><i style="width:${(r.v/max*100).toFixed(1)}%;background:${r.c||color||'var(--blue)'}"></i></span><span class="v">${esc(r.t??r.v)}</span></div>`).join(''):'<div class="empty">Nothing yet.</div>'; }
 
 /* ---------- overview ---------- */
@@ -243,13 +254,28 @@ function renderOverview(){
   $('#ch-ann').innerHTML=bars(db.anns.slice(0,6).map(a=>{ const n=db.annReads.filter(r=>r.announcement_id===a.id).length; return {l:a.title,v:n,t:`${n} / ${active().length}`}; }),'var(--coral)');
   const months=[...Array(6)].map((_,i)=>{ const d=new Date(now.getFullYear(),now.getMonth()-5+i,1); return {l:d.toLocaleDateString('en-US',{month:'short',year:'2-digit'}),v:db.members.filter(m=>{ const c=new Date(m.created_at); return c.getFullYear()===d.getFullYear()&&c.getMonth()===d.getMonth(); }).length}; });
   $('#ch-join').innerHTML=bars(months);
-  const attn=[];
+  const attn=[]; const nInq=db.inquiries.filter(i=>i.status==='new').length; if(nInq) attn.push(`${nInq} new inquiry(ies) from the website waiting for a reply.`);
   const noCode=upcoming.filter(e=>!db.codes.some(c=>c.event_id===e.id)); if(noCode.length) attn.push(`${noCode.length} upcoming event(s) have no check-in code (run the check-in SQL).`);
   const unreadPinned=db.anns.filter(a=>a.pinned).map(a=>({a,n:active().length-db.annReads.filter(r=>r.announcement_id===a.id).length})).filter(x=>x.n>0); unreadPinned.forEach(x=>attn.push(`"${x.a.title}" — ${x.n} member(s) haven't read it.`));
   const noShow=active().filter(m=>!db.checkins.some(c=>c.member_id===m.id)&&new Date(m.created_at)<new Date(now.getTime()-30*864e5)); if(noShow.length) attn.push(`${noShow.length} member(s) joined 30+ days ago and haven't checked in to any event yet.`);
   const emptyWeek=upcoming.filter(e=>new Date(e.starts_at)<new Date(now.getTime()+7*864e5)).length===0; if(emptyWeek) attn.push('No events on the calendar for the next 7 days.');
   $('#attn').innerHTML=attn.length?'<ul style="margin:0;padding-left:18px;color:var(--muted)">'+attn.map(a=>`<li style="margin:4px 0">${esc(a)}</li>`).join('')+'</ul>':'<div class="empty">All clear.</div>';
 }
+
+/* ---------- inquiries ---------- */
+let inqF='new'; const INQ_ROLE={agent:'eXp agent in Louisville',considering:'Agent considering eXp',partner:'Lender / title / vendor',other:'Something else'};
+function renderInquiries(){
+  const n=db.inquiries.filter(i=>i.status==='new').length; const b=$('#inq-badge'); b.textContent=n; b.style.display=n?'inline-block':'none';
+  const list=db.inquiries.filter(i=>!inqF||i.status===inqF);
+  $('#inq-list').innerHTML=list.map(i=>`<tr class="row"><td class="nw">${fmtD(i.created_at)}<span class="sub">${fmtT(i.created_at)}</span></td><td><b>${esc(i.name)}</b><span class="sub"><a href="mailto:${esc(i.email)}">${esc(i.email)}</a>${i.phone?` · <a href="tel:${esc(String(i.phone).replace(/\D/g,''))}">${esc(i.phone)}</a>`:''}</span></td><td class="nw"><span class="pill ${i.role==='considering'?'amber':i.role==='partner'?'blue':''}">${INQ_ROLE[i.role]||i.role}</span><span class="sub">${i.lang==='es'?'Español':'English'}</span></td><td style="max-width:320px">${esc(i.message||'')}${i.notes?`<span class="sub" style="color:var(--amber)">Note: ${esc(i.notes)}</span>`:''}</td><td class="nw"><select data-inq-status="${i.id}" style="padding:6px 10px;width:auto"><option value="new" ${i.status==='new'?'selected':''}>New</option><option value="contacted" ${i.status==='contacted'?'selected':''}>Contacted</option><option value="closed" ${i.status==='closed'?'selected':''}>Closed</option></select></td><td style="text-align:right;white-space:nowrap"><button class="btn sm" data-inq-note="${i.id}">Note</button> <button class="btn sm d" data-inq-del="${i.id}">Delete</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty">Nothing here.</td></tr>';
+}
+$$('#inq-seg button').forEach(b=>b.onclick=()=>{ $$('#inq-seg button').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); inqF=b.dataset.f; renderInquiries(); });
+$('#inq-csv').onclick=()=>csv('inquiries.csv',[['Received','Name','Email','Phone','I am','Language','Message','Status','Notes'],...db.inquiries.map(i=>[new Date(i.created_at).toLocaleString(),i.name,i.email,i.phone||'',INQ_ROLE[i.role]||i.role,i.lang,i.message||'',i.status,i.notes||''])]);
+document.addEventListener('change',async e=>{ const s=e.target.closest('[data-inq-status]'); if(!s) return; await q(sb.from('inquiries').update({status:s.value}).eq('id',s.dataset.inqStatus),'inq'); await loadAll(); renderAll(); toast('Updated'); });
+document.addEventListener('click',async e=>{
+  const n=e.target.closest('[data-inq-note]'); if(n){ const i=db.inquiries.find(x=>x.id===n.dataset.inqNote); const v=prompt('Note (who called, outcome, next step):', i.notes||''); if(v===null) return; await q(sb.from('inquiries').update({notes:v.trim()||null}).eq('id',i.id),'inq'); await loadAll(); renderAll(); return; }
+  const d=e.target.closest('[data-inq-del]'); if(d){ if(!confirm('Delete this inquiry?')) return; await q(sb.from('inquiries').delete().eq('id',d.dataset.inqDel),'inq'); await loadAll(); renderAll(); }
+});
 
 /* ---------- members ---------- */
 let mbF='active';
