@@ -310,10 +310,12 @@ input,select,textarea{font:inherit}
       <div class="toggle"><div><b data-i18n="n1">Booking confirmations</b><small data-i18n="n1s">When a room is booked or released</small></div><button class="sw" role="switch" aria-checked="true" data-n="book"></button></div>
       <div class="toggle"><div><b data-i18n="n2">Event reminders</b><small data-i18n="n2s">The morning of anything you RSVP'd to</small></div><button class="sw" role="switch" aria-checked="true" data-n="event"></button></div>
       <div class="toggle"><div><b data-i18n="n3">New messages</b><small data-i18n="n3s">Direct messages and mentions</small></div><button class="sw" role="switch" aria-checked="true" data-n="msg"></button></div>
+      <div class="toggle"><div><b data-i18n="n5">Weekly digest email</b><small data-i18n="n5s">Monday morning: events, announcements, and a note from Francisco</small></div><button class="sw" role="switch" aria-checked="true" data-n="digest"></button></div>
       <div class="toggle"><div><b data-i18n="n4">Announcements only</b><small data-i18n="n4s">Quiet everything except #general</small></div><button class="sw" role="switch" aria-checked="false" data-n="quiet"></button></div>
     </div>
   </div>
   <div class="sec" id="admin-sec" hidden><div class="sec-h"><h2 data-i18n="more.admin">Admin</h2></div>
+    <button class="item" id="adm-note"><div class="ic a">✉️</div><div class="tx"><b data-i18n="adm6">Weekly note</b><small data-i18n="adm6s">Your message at the top of Monday's digest email</small></div></button>
     <button class="item" id="adm-ann"><div class="ic v">📣</div><div class="tx"><b data-i18n="adm5">Post an announcement</b><small data-i18n="adm5s">Everyone sees it on Home; you see who read it</small></div></button>
     <button class="item" data-adm="event"><div class="ic b">＋</div><div class="tx"><b data-i18n="adm1">Post an event</b><small data-i18n="adm1s">Training, mastermind, mixer</small></div></button>
     <button class="item" data-adm="spot"><div class="ic c">★</div><div class="tx"><b data-i18n="adm2">Post a spotlight</b><small data-i18n="adm2s">Capping, ICON, first closing</small></div></button>
@@ -352,6 +354,7 @@ input,select,textarea{font:inherit}
    ========================================================================== */
 const SUPABASE_URL = 'https://pnwkkjqnkvivadlqathg.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_1_w-T-dOjVaiwI6lo-j0YA_hwW7QU8J';
+const DIGEST_SECRET = 'c01d20c7a3989d07e3be7e786a932f2a15c8ccc89593a12c'; // lets admins send themselves a test digest
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
 
 const LS_KEY='ccl-app-v1';
@@ -422,7 +425,7 @@ function normSpot(s){ return { ...s, who:s.member_name }; }
 const ES = {
   'app':'Culture Center','auth.t1':'Hecho por agentes, para agentes.','auth.t2':'En Louisville.','auth.p':'Eventos, reservas de salas, chat y el directorio de la oficina, en un solo lugar. Escribe tu correo de eXp y te mandamos un código. Sin contraseña.','app':'Culture Center Louisville','home.weyebrow':'eXp Culture Center Louisville','home.wtitle':'Hecho por agentes, para agentes.','home.wtitle2':'En Louisville.','home.wsub':'Reserva una sala, confirma tu asistencia a una capacitación, escríbele a un colega, mira quién acaba de hacer cap.','auth.label':'Correo de eXp','auth.send':'Mándame un código','auth.codelabel':'Código del correo','auth.verify':'Entrar','auth.resend':'Mandar otro código','auth.note':'Solo para miembros del Culture Center. ¿Todavía no estás en la lista? Pídele a Francisco o a Andy que te agreguen.','auth.installb':'Agrégala a tu pantalla de inicio','auth.installp':'Toca Compartir y luego "Agregar a inicio" para que se abra como una app.','auth.demo':'Ver como Brenda (demo)',
   'demo.banner':'Vista previa con datos de ejemplo. Nada de esto se guarda en la oficina todavía.',
-  'home.hi':'Hola,','home.next':'Lo que sigue','home.all':'Todos los eventos','home.open':'salas libres ahora','home.rooms':'Salas hoy','home.ann':'Anuncios','adm5':'Publicar un anuncio','adm5s':'Todos lo ven en Inicio; tú ves quién lo leyó','home.book':'Reservar','home.unread':'mensajes sin leer','home.spot':'Agente destacado','home.quick':'Acciones rápidas','home.q1':'Reservar una sala','home.q2':'Buscar a un agente',
+  'home.hi':'Hola,','home.next':'Lo que sigue','home.all':'Todos los eventos','home.open':'salas libres ahora','home.rooms':'Salas hoy','n5':'Resumen semanal por correo','n5s':'Lunes por la mañana: eventos, anuncios y una nota de Francisco','adm6':'Nota semanal','adm6s':'Tu mensaje al inicio del correo del lunes','home.ann':'Anuncios','adm5':'Publicar un anuncio','adm5s':'Todos lo ven en Inicio; tú ves quién lo leyó','home.book':'Reservar','home.unread':'mensajes sin leer','home.spot':'Agente destacado','home.quick':'Acciones rápidas','home.q1':'Reservar una sala','home.q2':'Buscar a un agente',
   'ev.title':'Eventos','ev.new':'+ Nuevo evento','ev.up':'Próximos','ev.mine':'Míos','ev.past':'Pasados','ev.going':'van','ev.rsvp':'Confirmar','ev.goingBtn':'Voy','ev.cancel':'Ya no voy','ev.cal':'Agregar al calendario','ev.empty':'Nada por aquí todavía.',
   'sp.title':'Reserva un espacio','sp.sub':'Elige un espacio para ver su disponibilidad.','sp.mine':'Mis reservas','sp.open':'Libre','sp.busy':'Ocupada','sp.soon':'Muy pronto','sp.book':'Reservar','sp.pick':'Elige un horario','sp.none':'Todavía no tienes reservas.','sp.booked':'Reservado','sp.release':'Cancelar reserva',
   'ch.title':'Chat','ch.new':'+ Nuevo mensaje','ch.channels':'Canales','ch.dm':'Mensajes directos','ch.back':'Chat','ch.send':'Enviar','ch.ph':'Mensaje…',
@@ -435,7 +438,7 @@ const ES = {
 const EN = {};
 document.querySelectorAll('[data-i18n]').forEach(el=>{ EN[el.dataset.i18n]=el.innerHTML; });
 document.querySelectorAll('[data-i18n-ph]').forEach(el=>{ EN[el.dataset.i18nPh]=el.placeholder; });
-Object.assign(EN,{ 'home.ann':'Announcements','adm5':'Post an announcement','adm5s':'Everyone sees it on Home; you see who read it','dir.agents':'Agents','dir.partners':'Partners','pt.new':'Partner','pt.lender':'Lenders','pt.title':'Title','pt.vendor':'Vendors','pt.community':'Community','home.rooms':'Rooms today','home.book':'Book','ev.going':'going','ev.rsvp':'RSVP','ev.goingBtn':'Going','ev.cancel':"Can't make it",'ev.cal':'Add to calendar','ev.empty':'Nothing here yet.','sp.open':'Open','sp.busy':'Booked','sp.soon':'Coming soon','sp.book':'Book','sp.pick':'Pick a time','sp.none':'No bookings yet.','sp.booked':'Booked','sp.release':'Cancel booking','dir.members':'members','dir.call':'Call','dir.text':'Text','dir.email':'Email','dir.dm':'Message','adm.evTitle':'New event','adm.spTitle':'New spotlight','adm.mbTitle':'New member','adm.save':'Post','f.title':'Title','f.when':'Date & time','f.where':'Where','f.lang':'Language','f.desc':'Description','f.who':'Agent','f.what':'Milestone','f.note':'Note','f.name':'Name','f.email':'eXp email','f.saved':'Posted','f.added':'Member added','toast.rsvp':"You're in. See you there.",'toast.unrsvp':'RSVP removed.','toast.booked':'Room booked.','toast.released':'Booking cancelled.','toast.sent':'Sent.','toast.link':'Link sent (demo). Check your email.','toast.demo':'Preview only' });
+Object.assign(EN,{ 'n5':'Weekly digest email','n5s':"Monday morning: events, announcements, and a note from Francisco",'adm6':'Weekly note','adm6s':"Your message at the top of Monday's digest email",'home.ann':'Announcements','adm5':'Post an announcement','adm5s':'Everyone sees it on Home; you see who read it','dir.agents':'Agents','dir.partners':'Partners','pt.new':'Partner','pt.lender':'Lenders','pt.title':'Title','pt.vendor':'Vendors','pt.community':'Community','home.rooms':'Rooms today','home.book':'Book','ev.going':'going','ev.rsvp':'RSVP','ev.goingBtn':'Going','ev.cancel':"Can't make it",'ev.cal':'Add to calendar','ev.empty':'Nothing here yet.','sp.open':'Open','sp.busy':'Booked','sp.soon':'Coming soon','sp.book':'Book','sp.pick':'Pick a time','sp.none':'No bookings yet.','sp.booked':'Booked','sp.release':'Cancel booking','dir.members':'members','dir.call':'Call','dir.text':'Text','dir.email':'Email','dir.dm':'Message','adm.evTitle':'New event','adm.spTitle':'New spotlight','adm.mbTitle':'New member','adm.save':'Post','f.title':'Title','f.when':'Date & time','f.where':'Where','f.lang':'Language','f.desc':'Description','f.who':'Agent','f.what':'Milestone','f.note':'Note','f.name':'Name','f.email':'eXp email','f.saved':'Posted','f.added':'Member added','toast.rsvp':"You're in. See you there.",'toast.unrsvp':'RSVP removed.','toast.booked':'Room booked.','toast.released':'Booking cancelled.','toast.sent':'Sent.','toast.link':'Link sent (demo). Check your email.','toast.demo':'Preview only' });
 function t(k){ return (state.lang==='es' ? ES[k] : EN[k]) ?? EN[k] ?? k; }
 function L(obj, key){ return state.lang==='es' && obj[key+'_es'] ? obj[key+'_es'] : obj[key]; }
 function applyLang(){
@@ -820,6 +823,18 @@ $$('#dir-seg button').forEach(b=>b.addEventListener('click',()=>{ $$('#dir-seg b
 $$('#pt-seg button').forEach(b=>b.addEventListener('click',()=>{ $$('#pt-seg button').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); ptCat=b.dataset.c; renderDirectory(); }));
 $('#pt-new').addEventListener('click',()=>partnerForm());
 $('#adm-ann').addEventListener('click',()=>announcementForm());
+$('#adm-note').addEventListener('click', async()=>{ const es=state.lang==='es'; const { data } = await sb.from('app_settings').select('value').eq('key','weekly_note').maybeSingle(); const v=(data&&data.value)||{};
+  openSheet(`<h2>${es?'Nota semanal':'Weekly note'}</h2><p class="meta">${es?'Va arriba del correo del lunes. Usa {first_name} para el nombre de cada agente.':'Goes at the top of Monday\'s email. Use {first_name} for each agent\'s name.'}</p>
+    <div class="field" style="margin-top:12px"><label>${es?'Asunto (opcional)':'Subject (optional)'}</label><input id="wn-subj" value="${esc(v.subject||'')}" placeholder="This week at the Center"></div>
+    <div class="field"><label>${es?'Mensaje':'Message'}</label><textarea id="wn-body" rows="9">${esc(v.body||'')}</textarea></div>
+    <div class="field"><label>${es?'Línea en español (opcional)':'Spanish line (optional)'}</label><input id="wn-es" value="${esc(v.body_es||'')}"></div>
+    <div class="actions"><button class="btn btn-ghost" id="wn-test">${es?'Enviarme una prueba':'Send me a test'}</button><button class="btn btn-primary" id="wn-save">${es?'Guardar':'Save'}</button></div>
+    <p class="note" style="margin-top:10px">${es?'Se envía solo los lunes a las 7 AM. Si dejas el mensaje vacío, se usa uno corto de siempre.':'Sends Mondays at 7 AM. Leave the message empty and a short standing note is used.'}</p>`);
+  const save=async()=>{ const value={subject:$('#wn-subj').value.trim()||null, body:$('#wn-body').value.trim(), body_es:$('#wn-es').value.trim()||null}; await q(sb.from('app_settings').upsert({key:'weekly_note', value, updated_at:new Date().toISOString()}),'note'); return value; };
+  $('#wn-save').onclick=async()=>{ try{ await save(); }catch(e){ toast(e.message); return; } closeSheet(); toast(es?'Guardado.':'Saved.'); };
+  $('#wn-test').onclick=async()=>{ try{ await save(); }catch(e){ toast(e.message); return; } $('#wn-test').disabled=true;
+    const r=await fetch(SUPABASE_URL+'/functions/v1/digest',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'x-webhook-secret':DIGEST_SECRET},body:JSON.stringify({type:'digest',test_to:db.me.email})}).catch(()=>null);
+    $('#wn-test').disabled=false; toast(r&&r.ok?(es?'Prueba enviada a tu correo.':'Test sent to your email.'):(es?'No se pudo enviar la prueba.':'Could not send the test.')); }; });
 document.addEventListener('click', e=>{
   const b=e.target.closest('[data-partner]'); if(!b) return; const p=db.partners.find(x=>x.id===b.dataset.partner); if(!p) return;
   const tel=(p.phone||'').replace(/\D/g,'');
@@ -925,7 +940,7 @@ function renderMore(){
   $('#edit-me').onclick=()=>adminForm('member', me, true);
   $('#admin-sec').hidden=!isAdmin();
   const prefs=db.me.prefs||{};
-  $$('.sw').forEach(s=>s.setAttribute('aria-checked', String(!!prefs[s.dataset.n])));
+  $$('.sw').forEach(s=>s.setAttribute('aria-checked', String(s.dataset.n==='digest' ? prefs.digest!==false : !!prefs[s.dataset.n])));
   const ps=$('#push-state'); if (ps){ const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
     ps.textContent = !pushSupported() ? '' : Notification.permission==='granted' ? (state.lang==='es'?'Activas en este teléfono':'On for this phone') : (/iphone|ipad/i.test(navigator.userAgent)&&!standalone) ? (state.lang==='es'?'Agrega la app a inicio para activarlas':'Add to home screen to enable') : (state.lang==='es'?'Toca un interruptor para activarlas':'Flip a switch to enable'); }
 }
@@ -970,8 +985,8 @@ async function enablePush(){
 }
 async function refreshPush(){ try{ if (!pushSupported() || Notification.permission!=='granted') return; const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription(); if (sub){ const j=sub.toJSON(); await sb.from('push_subscriptions').upsert({ member_id: db.me.id, endpoint: sub.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, last_seen: new Date().toISOString() }, { onConflict:'endpoint' }); } }catch(e){} }
 $$('.sw').forEach(s=>s.addEventListener('click', async ()=>{
-  const prefs={...(db.me.prefs||{})}; const turningOn=!prefs[s.dataset.n];
-  if (turningOn && s.dataset.n!=='quiet'){ const ok=await enablePush(); if(!ok) return; }
+  const prefs={...(db.me.prefs||{})}; if(s.dataset.n==='digest' && prefs.digest===undefined) prefs.digest=true; const turningOn=!prefs[s.dataset.n];
+  if (turningOn && s.dataset.n!=='quiet' && s.dataset.n!=='digest'){ const ok=await enablePush(); if(!ok) return; }
   prefs[s.dataset.n]=!prefs[s.dataset.n]; db.me.prefs=prefs; renderMore(); await sb.from('members').update({prefs}).eq('id',db.me.id);
   if (turningOn && s.dataset.n!=='quiet') toast(state.lang==='es'?'Notificaciones activadas':'Notifications on');
 }));
