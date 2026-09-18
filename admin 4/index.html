@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Admin · eXp Culture Center Louisville</title>
+<link rel="icon" href="../img/exp-logo-white.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#0B1220;--surface:#111A2E;--surface2:#182337;--line:#1F2B44;--line2:#2A3853;--ink:#fff;--muted:#9AA4B8;--dim:#6B7690;--coral:#FF5A3C;--amber:#F5A623;--blue:#3C87F7;--green:#1FB98F;--red:#FF5A5A;--display:'Space Grotesk',sans-serif;--body:Inter,system-ui,sans-serif}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.45}
+a{color:var(--blue)}button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}input,select,textarea{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line2);border-radius:10px;padding:9px 12px;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue)}textarea{min-height:90px;resize:vertical}
+h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.01em}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;font-weight:600;font-size:13px;border:1px solid var(--line2);background:var(--surface2);white-space:nowrap}
+.btn.p{background:var(--blue);border-color:var(--blue)}.btn.c{background:var(--coral);border-color:var(--coral)}.btn.sm{padding:6px 12px;font-size:12px}.btn.d{color:var(--red)}.btn:disabled{opacity:.5;cursor:default}
+/* auth */
+#auth{min-height:100%;display:grid;place-items:center;padding:24px}
+#auth .box{width:100%;max-width:400px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:30px}
+#auth .brand{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13px;margin-bottom:22px}#auth .brand img{height:30px}
+#auth h1{font-size:24px;margin-bottom:6px}#auth p{color:var(--muted);margin:0 0 18px}#auth .field{margin-top:12px}#auth .msg{color:var(--amber);font-size:13px;margin-top:10px;min-height:18px}
+/* shell */
+#shell{display:none;min-height:100%;grid-template-columns:230px 1fr}
+aside{background:var(--surface);border-right:1px solid var(--line);padding:20px 14px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column}
+aside .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 20px;color:var(--muted);font-size:12px}aside .brand img{height:26px}aside .brand b{color:#fff;font-family:var(--display);font-size:13px;display:block}
+nav button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;border-radius:12px;color:var(--muted);font-weight:500}
+nav button[aria-current="true"]{background:var(--surface2);color:#fff}nav button:hover{color:#fff}nav button i{width:20px;text-align:center;font-style:normal;opacity:.8}
+aside .me{margin-top:auto;padding:12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}aside .me b{display:block;color:#fff}
+main{padding:28px 32px;max-width:1240px}
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px}.top h1{font-size:26px}.top p{margin:4px 0 0;color:var(--muted)}
+.page{display:none}.page.active{display:block}
+.grid{display:grid;gap:14px}.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+@media (max-width:1100px){.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr 1fr}}
+@media (max-width:820px){#shell{grid-template-columns:1fr}aside{position:static;height:auto;flex-direction:row;flex-wrap:wrap;gap:6px}aside nav{display:flex;flex-wrap:wrap;gap:4px}aside .me{margin:0;border:0}main{padding:18px}.g4,.g3,.g2{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px}
+.kpi b{font-family:var(--display);font-size:30px;display:block;line-height:1}.kpi span{color:var(--muted);font-size:12px;display:block;margin-top:6px}.kpi small{display:block;margin-top:8px;font-size:12px;color:var(--green)}
+.card h3{font-size:15px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}.card h3 span{font-weight:500;color:var(--muted);font-size:12px}
+table{width:100%;border-collapse:collapse}th{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}td.nw{white-space:nowrap}.card.tbl{padding:0 6px;overflow-x:auto}tr:last-child td{border-bottom:0}tr.row:hover td{background:rgba(255,255,255,.02)}td .sub{color:var(--muted);font-size:12px;display:block}
+.pill{display:inline-block;font-size:11px;padding:3px 9px;border-radius:999px;background:var(--surface2);color:var(--muted);font-weight:600}.pill.on{background:rgba(31,185,143,.18);color:var(--green)}.pill.busy{background:rgba(255,90,90,.18);color:var(--red)}.pill.amber{background:rgba(245,166,35,.18);color:var(--amber)}.pill.blue{background:rgba(60,135,247,.2);color:var(--blue)}
+.tools{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}.tools input{max-width:320px}.seg{display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:999px}.seg button{padding:6px 12px;border-radius:999px;font-size:12px;color:var(--muted);font-weight:600}.seg button[aria-pressed="true"]{background:#fff;color:var(--bg)}
+.bar{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:12px}.bar .lbl{width:170px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bar .tr{flex:1;height:10px;background:var(--surface2);border-radius:999px;overflow:hidden}.bar .tr i{display:block;height:100%;border-radius:999px;background:var(--blue)}.bar .v{width:64px;text-align:right;font-variant-numeric:tabular-nums}
+.empty{color:var(--dim);padding:18px 0;text-align:center;font-size:13px}
+/* room grid */
+.rgrid{display:grid;grid-template-columns:150px repeat(7,1fr);gap:4px;font-size:12px}.rgrid .h{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.1em;padding:6px}.rgrid .rn{padding:8px 6px;color:var(--muted);font-weight:600}.rgrid .cell{background:var(--surface2);border-radius:10px;min-height:56px;padding:6px}.rgrid .cell.today{outline:1px solid var(--line2)}.rgrid .bk{background:rgba(60,135,247,.25);border-left:3px solid var(--blue);border-radius:6px;padding:3px 6px;margin-bottom:4px;cursor:pointer;line-height:1.25}.rgrid .bk small{display:block;color:var(--muted)}
+/* modal */
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center;padding:20px;z-index:20}#modal.open{display:grid}#modal .box{background:var(--surface);border:1px solid var(--line2);border-radius:20px;padding:24px;width:100%;max-width:560px;max-height:90vh;overflow:auto}#modal h2{font-size:20px;margin-bottom:14px}.field{margin-top:12px}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}.row{display:flex;gap:12px}.row>*{flex:1}.actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#fff;color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:600;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:30}#toast.show{opacity:1}
+.chips span{display:inline-block;font-size:11px;padding:3px 9px;border-radius:999px;background:var(--surface2);color:var(--muted);margin:2px 4px 2px 0}.chips span.ok{color:var(--green)}
+</style>
+</head>
+<body>
+
+<div id="auth">
+  <div class="box">
+    <div class="brand"><img src="../img/exp-logo-white.png" alt="eXp Realty"><span>Culture Center Louisville · Admin</span></div>
+    <h1>Sign in</h1><p>Admins only. Use your eXp email and we'll send you a code.</p>
+    <div class="field"><input id="a-email" type="email" placeholder="you@exprealty.com" autocomplete="email"></div>
+    <div class="field" id="a-code-wrap" hidden><input id="a-code" inputmode="numeric" maxlength="8" placeholder="8-digit code" style="text-align:center;letter-spacing:.3em;font-family:var(--display);font-size:20px"></div>
+    <div class="field"><button class="btn p" id="a-send" style="width:100%;justify-content:center">Send me a code</button><button class="btn p" id="a-verify" hidden style="width:100%;justify-content:center">Sign in</button></div>
+    <div class="msg" id="a-msg"></div>
+  </div>
+</div>
+
+<div id="shell">
+  <aside>
+    <div class="brand"><img src="../img/exp-logo-white.png" alt=""><div><b>Culture Center</b>Admin dashboard</div></div>
+    <nav>
+      <button data-p="overview" aria-current="true"><i>◫</i>Overview</button>
+      <button data-p="inquiries"><i>✉</i>Inquiries <span class="pill busy" id="inq-badge" style="margin-left:auto;display:none"></span></button>
+      <button data-p="members"><i>☺</i>Members</button>
+      <button data-p="events"><i>▦</i>Events</button>
+      <button data-p="rooms"><i>⌂</i>Rooms</button>
+      <button data-p="announcements"><i>📣</i>Announcements</button>
+      <button data-p="partners"><i>◈</i>Partners</button>
+      <button data-p="resources"><i>▤</i>Resources</button>
+      <button data-p="settings"><i>✉</i>Weekly email</button>
+    </nav>
+    <div class="me"><b id="me-name"></b><span id="me-email"></span><br><button id="signout" style="color:var(--red);font-weight:600;padding:0;margin-top:6px">Sign out</button> · <a href="../app/" target="_blank">Open the app</a></div>
+  </aside>
+  <main>
+    <!-- OVERVIEW -->
+    <section class="page active" id="p-overview">
+      <div class="top"><div><h1>Overview</h1><p id="ov-date"></p></div><button class="btn" id="refresh">↻ Refresh</button></div>
+      <div class="grid g4" id="kpis"></div>
+      <div class="grid g2" style="margin-top:14px">
+        <div class="card"><h3>Attendance · last 10 events <span>checked in / RSVP'd</span></h3><div id="ch-att"></div></div>
+        <div class="card"><h3>Room use · this month <span>hours booked</span></h3><div id="ch-rooms"></div></div>
+        <div class="card"><h3>Announcements <span>read rate</span></h3><div id="ch-ann"></div></div>
+        <div class="card"><h3>Members joined <span>last 6 months</span></h3><div id="ch-join"></div></div>
+      </div>
+      <div class="card" style="margin-top:14px"><h3>Needs attention</h3><div id="attn"></div></div>
+    </section>
+
+    <!-- INQUIRIES -->
+    <section class="page" id="p-inquiries">
+      <div class="top"><div><h1>Inquiries</h1><p>From the "Get involved" form on the website. You and Andy get an email for each one.</p></div><button class="btn" id="inq-csv">⬇ Export CSV</button></div>
+      <div class="tools"><div class="seg" id="inq-seg"><button aria-pressed="true" data-f="new">New</button><button data-f="contacted">Contacted</button><button data-f="closed">Closed</button><button data-f="">All</button></div></div>
+      <div class="card tbl"><table><thead><tr><th>Received</th><th>Who</th><th>I am</th><th>Message</th><th>Status</th><th></th></tr></thead><tbody id="inq-list"></tbody></table></div>
+    </section>
+
+    <!-- MEMBERS -->
+    <section class="page" id="p-members">
+      <div class="top"><div><h1>Members</h1><p id="mb-count"></p></div><div style="display:flex;gap:10px"><button class="btn" id="mb-csv">⬇ Export CSV</button><button class="btn p" id="mb-new">+ Add member</button></div></div>
+      <div class="tools"><input id="mb-q" placeholder="Search name, email, phone"><div class="seg" id="mb-seg"><button aria-pressed="true" data-f="active">Active</button><button data-f="admins">Admins</button><button data-f="inactive">Removed</button></div></div>
+      <div class="card tbl"><table><thead><tr><th>Name</th><th>Email · phone</th><th>Role</th><th>Languages</th><th>Attended</th><th>Onboarding</th><th>Joined</th><th></th></tr></thead><tbody id="mb-list"></tbody></table></div>
+    </section>
+
+    <!-- EVENTS -->
+    <section class="page" id="p-events">
+      <div class="top"><div><h1>Events</h1><p id="ev-count"></p></div><div style="display:flex;gap:10px"><button class="btn" id="ev-csv">⬇ Export attendance</button><button class="btn p" id="ev-new">+ New event</button></div></div>
+      <div class="tools"><div class="seg" id="ev-seg"><button aria-pressed="true" data-f="upcoming">Upcoming</button><button data-f="past">Past</button></div></div>
+      <div class="card tbl"><table><thead><tr><th>When</th><th>Event</th><th>Where</th><th>RSVP</th><th>Checked in</th><th>Code</th><th></th></tr></thead><tbody id="ev-list"></tbody></table></div>
+    </section>
+
+    <!-- ROOMS -->
+    <section class="page" id="p-rooms">
+      <div class="top"><div><h1>Rooms</h1><p id="rm-week"></p></div><div style="display:flex;gap:10px"><button class="btn" id="rm-prev">‹ Week</button><button class="btn" id="rm-today">Today</button><button class="btn" id="rm-next">Week ›</button></div></div>
+      <div class="card"><div class="rgrid" id="rm-grid"></div></div>
+    </section>
+
+    <!-- ANNOUNCEMENTS -->
+    <section class="page" id="p-announcements">
+      <div class="top"><div><h1>Announcements</h1><p>Everyone sees these on the app's Home screen.</p></div><button class="btn p" id="an-new">+ Post announcement</button></div>
+      <div class="card tbl"><table><thead><tr><th>Announcement</th><th>Posted</th><th>Read</th><th></th></tr></thead><tbody id="an-list"></tbody></table></div>
+    </section>
+
+    <!-- PARTNERS -->
+    <section class="page" id="p-partners">
+      <div class="top"><div><h1>Partners</h1><p id="pt-count"></p></div><button class="btn p" id="pt-new">+ Add partner</button></div>
+      <div class="tools"><input id="pt-q" placeholder="Search company or contact"><div class="seg" id="pt-seg"><button aria-pressed="true" data-f="">All</button><button data-f="lender">Lenders</button><button data-f="title">Title</button><button data-f="vendor">Vendors</button><button data-f="community">Community</button></div></div>
+      <div class="card tbl"><table><thead><tr><th>Company</th><th>Type</th><th>Contact</th><th>Phone · email</th><th>Languages</th><th></th></tr></thead><tbody id="pt-list"></tbody></table></div>
+    </section>
+
+    <!-- RESOURCES -->
+    <section class="page" id="p-resources">
+      <div class="top"><div><h1>Resources</h1><p id="rs-count"></p></div><button class="btn p" id="rs-new">+ Add link</button></div>
+      <div class="tools"><input id="rs-q" placeholder="Search"><div class="seg" id="rs-seg"><button aria-pressed="true" data-f="">All</button><button data-f="Forms">Forms</button><button data-f="Training">Training</button><button data-f="Toolkits">Toolkits</button><button data-f="Office">Office</button><button data-f="Partners">Partners</button><button data-f="Community">Community</button></div></div>
+      <div class="card tbl"><table><thead><tr><th>Title</th><th>Category</th><th>Type</th><th>Pinned</th><th></th></tr></thead><tbody id="rs-list"></tbody></table></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="page" id="p-settings">
+      <div class="top"><div><h1>Weekly email</h1><p>Goes out Mondays at 7 AM to every member who hasn't turned it off.</p></div></div>
+      <div class="grid g2">
+        <div class="card"><h3>Your note at the top</h3>
+          <div class="field"><label>Subject (optional)</label><input id="wn-subj" placeholder="This week at the Center"></div>
+          <div class="field"><label>Message · use {first_name} for each agent's name</label><textarea id="wn-body" rows="12"></textarea></div>
+          <div class="field"><label>Spanish line (optional)</label><input id="wn-es"></div>
+          <div class="actions"><button class="btn" id="wn-test">Send me a test</button><button class="btn p" id="wn-save">Save</button></div>
+        </div>
+        <div class="card"><h3>Who gets it</h3><div id="wn-who"></div></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="modal"><div class="box" id="modal-box"></div></div>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL='https://pnwkkjqnkvivadlqathg.supabase.co', SUPABASE_KEY='sb_publishable_1_w-T-dOjVaiwI6lo-j0YA_hwW7QU8J';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'ccl-admin'}});
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtD=iso=>new Date(iso).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+const fmtT=iso=>new Date(iso).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+const fmtDT=iso=>fmtD(iso)+' · '+fmtT(iso);
+function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2600); }
+async function q(p,l){ const {data,error}=await p; if(error){ console.error(l,error); throw error; } return data; }
+function modal(html){ $('#modal-box').innerHTML=html; $('#modal').classList.add('open'); }
+function closeModal(){ $('#modal').classList.remove('open'); }
+$('#modal').addEventListener('click',e=>{ if(e.target.id==='modal') closeModal(); });
+function csv(name, rows){ const lines=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'})); a.download=name; a.click(); }
+
+const db={me:null,obSteps:[],obProg:[],inquiries:[],members:[],events:[],rsvps:[],checkins:[],bookings:[],rooms:[],anns:[],annReads:[],partners:[],resources:[],spots:[],codes:[]};
+async function loadAll(){
+  const now=new Date(), from=new Date(now.getTime()-120*864e5).toISOString(), to=new Date(now.getTime()+60*864e5).toISOString();
+  const [members,events,rsvps,checkins,bookings,rooms,anns,annReads,partners,resources,spots,codes,inquiries,obSteps,obProg]=await Promise.all([
+    q(sb.from('members').select('*').order('full_name'),'members'),
+    q(sb.from('events').select('*').gte('starts_at',from).order('starts_at'),'events'),
+    q(sb.from('rsvps').select('*'),'rsvps'),
+    sb.from('checkins').select('*').then(r=>r.data||[]),
+    q(sb.from('bookings').select('*').gte('starts_at',new Date(now.getTime()-45*864e5).toISOString()).lte('starts_at',to),'bookings'),
+    q(sb.from('rooms').select('*').order('sort'),'rooms'),
+    sb.from('announcements').select('*').order('created_at',{ascending:false}).limit(50).then(r=>r.data||[]),
+    sb.from('announcement_reads').select('*').then(r=>r.data||[]),
+    sb.from('partners').select('*').order('sort').order('name').then(r=>r.data||[]),
+    sb.from('resources').select('*').order('pinned',{ascending:false}).order('sort').then(r=>r.data||[]),
+    sb.from('spotlights').select('*').order('created_at',{ascending:false}).limit(20).then(r=>r.data||[]),
+    sb.from('event_codes').select('*').then(r=>r.data||[]),
+    sb.from('inquiries').select('*').order('created_at',{ascending:false}).limit(300).then(r=>r.data||[]),
+    sb.from('onboarding_steps').select('*').eq('active',true).order('sort').then(r=>r.data||[]),
+    sb.from('onboarding_progress').select('*').then(r=>r.data||[]),
+  ]);
+  Object.assign(db,{members,events,rsvps,checkins,bookings,rooms,anns,annReads,partners,resources,spots,codes,inquiries,obSteps,obProg});
+}
+const active=()=>db.members.filter(m=>m.active);
+const roomName=id=>(db.rooms.find(r=>r.id===id)||{}).name||id;
+const memberName=id=>(db.members.find(m=>m.id===id)||{}).full_name||'—';
+const rsvpN=id=>db.rsvps.filter(r=>r.event_id===id).length, ciN=id=>db.checkins.filter(c=>c.event_id===id).length;
+
+/* ---------- auth ---------- */
+function showAuth(msg){ $('#auth').style.display='grid'; $('#shell').style.display='none'; $('#a-msg').textContent=msg||''; }
+async function resolve(session){
+  if(!session){ showAuth(); return; }
+  const {data}=await sb.from('members').select('*').eq('user_id',session.user.id).eq('active',true).maybeSingle();
+  if(!data){ await sb.auth.signOut(); showAuth('This email is not on the member list.'); return; }
+  if(data.role!=='admin'){ await sb.auth.signOut(); showAuth('This dashboard is for admins only. Use the member app instead.'); return; }
+  db.me=data; $('#me-name').textContent=data.full_name; $('#me-email').textContent=data.email;
+  $('#auth').style.display='none'; $('#shell').style.display='grid';
+  try{ await loadAll(); }catch(e){ toast('Could not load: '+e.message); }
+  renderAll();
+}
+$('#a-send').onclick=async()=>{ const email=$('#a-email').value.trim().toLowerCase(); if(!email.includes('@')) return; $('#a-send').disabled=true; $('#a-msg').textContent='';
+  const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}}); $('#a-send').disabled=false;
+  if(error){ $('#a-msg').textContent=/member list/i.test(error.message)?'This email is not on the member list.':error.message; return; }
+  $('#a-code-wrap').hidden=false; $('#a-verify').hidden=false; $('#a-send').hidden=true; $('#a-email').disabled=true; $('#a-msg').textContent='Sent. Check your email and enter the code.'; $('#a-code').focus(); };
+async function verify(){ const email=$('#a-email').value.trim().toLowerCase(), token=$('#a-code').value.replace(/\D/g,''); if(token.length<6) return; $('#a-verify').disabled=true;
+  const {error}=await sb.auth.verifyOtp({email,token,type:'email'}); $('#a-verify').disabled=false; if(error) $('#a-msg').textContent=/expired|invalid/i.test(error.message)?'That code is wrong or expired.':error.message; }
+$('#a-verify').onclick=verify; $('#a-code').addEventListener('input',()=>{ if($('#a-code').value.replace(/\D/g,'').length===8) verify(); }); $('#a-code').addEventListener('keydown',e=>{ if(e.key==='Enter') verify(); });
+$('#signout').onclick=async()=>{ await sb.auth.signOut(); location.reload(); };
+sb.auth.onAuthStateChange((ev,session)=>{ if(ev==='SIGNED_IN'||ev==='INITIAL_SESSION') resolve(session); if(ev==='SIGNED_OUT') showAuth(); });
+
+/* ---------- nav ---------- */
+function goPage(p){ const b=$(`nav [data-p="${p}"]`); if(b) b.click(); }
+window.addEventListener('load',()=>{ const h=location.hash.replace('#',''); if(h) setTimeout(()=>goPage(h),50); });
+$$('nav button').forEach(b=>b.onclick=()=>{ $$('nav button').forEach(x=>x.setAttribute('aria-current','false')); b.setAttribute('aria-current','true'); $$('.page').forEach(p=>p.classList.remove('active')); $('#p-'+b.dataset.p).classList.add('active'); });
+$('#refresh').onclick=async()=>{ await loadAll(); renderAll(); toast('Refreshed'); };
+function renderAll(){ renderInquiries(); renderOverview(); renderMembers(); renderEvents(); renderRooms(); renderAnns(); renderPartners(); renderResources(); renderSettings(); }
+function bars(rows, color){ const max=Math.max(1,...rows.map(r=>r.v)); return rows.length?rows.map(r=>`<div class="bar"><span class="lbl" title="${esc(r.l)}">${esc(r.l)}</span><span class="tr"><i style="width:${(r.v/max*100).toFixed(1)}%;background:${r.c||color||'var(--blue)'}"></i></span><span class="v">${esc(r.t??r.v)}</span></div>`).join(''):'<div class="empty">Nothing yet.</div>'; }
+
+/* ---------- overview ---------- */
+function renderOverview(){
+  const now=new Date(); const wk=new Date(now.getTime()-7*864e5), mo=new Date(now.getFullYear(),now.getMonth(),1);
+  $('#ov-date').textContent=now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  const past=db.events.filter(e=>new Date(e.starts_at)<now); const recent=past.filter(e=>new Date(e.starts_at)>=new Date(now.getTime()-30*864e5));
+  const rs=recent.reduce((n,e)=>n+rsvpN(e.id),0), ci=recent.reduce((n,e)=>n+ciN(e.id),0);
+  const activeWk=new Set([...db.checkins.filter(c=>new Date(c.checked_at)>=wk).map(c=>c.member_id),...db.bookings.filter(b=>new Date(b.created_at||b.starts_at)>=wk).map(b=>b.member_id),...db.rsvps.map(r=>r.member_id).filter(()=>false)]).size;
+  const hrsMo=db.bookings.filter(b=>new Date(b.starts_at)>=mo).reduce((n,b)=>n+(new Date(b.ends_at)-new Date(b.starts_at))/36e5,0);
+  const upcoming=db.events.filter(e=>new Date(e.starts_at)>=now);
+  const newMo=db.members.filter(m=>new Date(m.created_at)>=mo).length;
+  $('#kpis').innerHTML=[
+    ['Active members',active().length,`+${newMo} this month`],
+    ['Upcoming events',upcoming.length,`${upcoming.reduce((n,e)=>n+rsvpN(e.id),0)} RSVPs so far`],
+    ['Attendance rate · 30 days',rs?Math.round(ci/rs*100)+'%':'—',`${ci} checked in of ${rs} RSVP'd`],
+    ['Room hours · this month',Math.round(hrsMo),`${db.bookings.filter(b=>new Date(b.starts_at)>=mo).length} bookings`],
+  ].map(k=>`<div class="card kpi"><b>${k[1]}</b><span>${k[0]}</span><small>${k[2]}</small></div>`).join('');
+  $('#ch-att').innerHTML=bars(past.slice(-10).reverse().map(e=>({l:e.title,v:ciN(e.id),t:`${ciN(e.id)} / ${rsvpN(e.id)}`})),'var(--green)');
+  const byRoom={}; db.bookings.filter(b=>new Date(b.starts_at)>=mo).forEach(b=>{ byRoom[b.room_id]=(byRoom[b.room_id]||0)+(new Date(b.ends_at)-new Date(b.starts_at))/36e5; });
+  $('#ch-rooms').innerHTML=bars(db.rooms.map(r=>({l:r.name,v:byRoom[r.id]||0,t:(byRoom[r.id]||0).toFixed(0)+' h'})),'var(--amber)');
+  $('#ch-ann').innerHTML=bars(db.anns.slice(0,6).map(a=>{ const n=db.annReads.filter(r=>r.announcement_id===a.id).length; return {l:a.title,v:n,t:`${n} / ${active().length}`}; }),'var(--coral)');
+  const months=[...Array(6)].map((_,i)=>{ const d=new Date(now.getFullYear(),now.getMonth()-5+i,1); return {l:d.toLocaleDateString('en-US',{month:'short',year:'2-digit'}),v:db.members.filter(m=>{ const c=new Date(m.created_at); return c.getFullYear()===d.getFullYear()&&c.getMonth()===d.getMonth(); }).length}; });
+  $('#ch-join').innerHTML=bars(months);
+  const attn=[]; const stuck=active().filter(m=>m.onboarding&&m.onboarding_started_at&&(Date.now()-new Date(m.onboarding_started_at))>14*864e5&&obProgress(m).pct<50); if(stuck.length) attn.push(`Onboarding: ${stuck.map(m=>m.full_name.split(' ')[0]).join(', ')} ${stuck.length>1?'are':'is'} under 50% after two weeks — worth a call.`); const nInq=db.inquiries.filter(i=>i.status==='new').length; if(nInq) attn.push(`${nInq} new inquiry(ies) from the website waiting for a reply.`);
+  const noCode=upcoming.filter(e=>!db.codes.some(c=>c.event_id===e.id)); if(noCode.length) attn.push(`${noCode.length} upcoming event(s) have no check-in code (run the check-in SQL).`);
+  const unreadPinned=db.anns.filter(a=>a.pinned).map(a=>({a,n:active().length-db.annReads.filter(r=>r.announcement_id===a.id).length})).filter(x=>x.n>0); unreadPinned.forEach(x=>attn.push(`"${x.a.title}" — ${x.n} member(s) haven't read it.`));
+  const noShow=active().filter(m=>!db.checkins.some(c=>c.member_id===m.id)&&new Date(m.created_at)<new Date(now.getTime()-30*864e5)); if(noShow.length) attn.push(`${noShow.length} member(s) joined 30+ days ago and haven't checked in to any event yet.`);
+  const emptyWeek=upcoming.filter(e=>new Date(e.starts_at)<new Date(now.getTime()+7*864e5)).length===0; if(emptyWeek) attn.push('No events on the calendar for the next 7 days.');
+  $('#attn').innerHTML=attn.length?'<ul style="margin:0;padding-left:18px;color:var(--muted)">'+attn.map(a=>`<li style="margin:4px 0">${esc(a)}</li>`).join('')+'</ul>':'<div class="empty">All clear.</div>';
+}
+
+/* ---------- inquiries ---------- */
+let inqF='new'; const INQ_ROLE={agent:'eXp agent in Louisville',considering:'Agent considering eXp',partner:'Lender / title / vendor',other:'Something else'};
+function renderInquiries(){
+  const n=db.inquiries.filter(i=>i.status==='new').length; const b=$('#inq-badge'); b.textContent=n; b.style.display=n?'inline-block':'none';
+  const list=db.inquiries.filter(i=>!inqF||i.status===inqF);
+  $('#inq-list').innerHTML=list.map(i=>`<tr class="row"><td class="nw">${fmtD(i.created_at)}<span class="sub">${fmtT(i.created_at)}</span></td><td><b>${esc(i.name)}</b><span class="sub"><a href="mailto:${esc(i.email)}">${esc(i.email)}</a>${i.phone?` · <a href="tel:${esc(String(i.phone).replace(/\D/g,''))}">${esc(i.phone)}</a>`:''}</span></td><td class="nw"><span class="pill ${i.role==='considering'?'amber':i.role==='partner'?'blue':''}">${INQ_ROLE[i.role]||i.role}</span><span class="sub">${i.lang==='es'?'Español':'English'}</span></td><td style="max-width:320px">${esc(i.message||'')}${i.notes?`<span class="sub" style="color:var(--amber)">Note: ${esc(i.notes)}</span>`:''}</td><td class="nw"><select data-inq-status="${i.id}" style="padding:6px 10px;width:auto"><option value="new" ${i.status==='new'?'selected':''}>New</option><option value="contacted" ${i.status==='contacted'?'selected':''}>Contacted</option><option value="closed" ${i.status==='closed'?'selected':''}>Closed</option></select></td><td style="text-align:right;white-space:nowrap"><button class="btn sm" data-inq-note="${i.id}">Note</button> <button class="btn sm d" data-inq-del="${i.id}">Delete</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty">Nothing here.</td></tr>';
+}
+$$('#inq-seg button').forEach(b=>b.onclick=()=>{ $$('#inq-seg button').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); inqF=b.dataset.f; renderInquiries(); });
+$('#inq-csv').onclick=()=>csv('inquiries.csv',[['Received','Name','Email','Phone','I am','Language','Message','Status','Notes'],...db.inquiries.map(i=>[new Date(i.created_at).toLocaleString(),i.name,i.email,i.phone||'',INQ_ROLE[i.role]||i.role,i.lang,i.message||'',i.status,i.notes||''])]);
+document.addEventListener('change',async e=>{ const s=e.target.closest('[data-inq-status]'); if(!s) return; await q(sb.from('inquiries').update({status:s.value}).eq('id',s.dataset.inqStatus),'inq'); await loadAll(); renderAll(); toast('Updated'); });
+document.addEventListener('click',async e=>{
+  const n=e.target.closest('[data-inq-note]'); if(n){ const i=db.inquiries.find(x=>x.id===n.dataset.inqNote); const v=prompt('Note (who called, outcome, next step):', i.notes||''); if(v===null) return; await q(sb.from('inquiries').update({notes:v.trim()||null}).eq('id',i.id),'inq'); await loadAll(); renderAll(); return; }
+  const d=e.target.closest('[data-inq-del]'); if(d){ if(!confirm('Delete this inquiry?')) return; await q(sb.from('inquiries').delete().eq('id',d.dataset.inqDel),'inq'); await loadAll(); renderAll(); }
+});
+
+/* ---------- onboarding helpers ---------- */
+function obProgress(m){ const total=db.obSteps.length||1; const done=db.obSteps.filter(st=>db.obProg.some(p=>p.member_id===m.id&&p.step_id===st.id)).length; return {done,total,pct:Math.round(done/total*100)}; }
+function obCell(m){ if(!m.onboarding) return '<span style="color:var(--dim)">—</span>'; const p=obProgress(m); const days=m.onboarding_started_at?Math.floor((Date.now()-new Date(m.onboarding_started_at))/864e5):null; return `<div class="bar" style="margin:0;min-width:150px"><span class="tr"><i style="width:${p.pct}%;background:${p.pct===100?'var(--green)':p.pct>=50?'var(--blue)':'var(--amber)'}"></i></span><span class="v">${p.done}/${p.total}</span></div>${days!==null?`<span class="sub">day ${days}${m.mentor_id?' · mentor: '+esc(memberName(m.mentor_id).split(' ')[0]):''}</span>`:''}`; }
+/* ---------- members ---------- */
+let mbF='active';
+function renderMembers(){
+  const qv=($('#mb-q').value||'').toLowerCase();
+  let list=db.members.filter(m=>mbF==='inactive'?!m.active:m.active); if(mbF==='admins') list=list.filter(m=>m.role==='admin');
+  list=list.filter(m=>!qv||[m.full_name,m.email,m.phone||''].join(' ').toLowerCase().includes(qv));
+  $('#mb-count').textContent=`${active().length} active · ${db.members.filter(m=>m.role==='admin'&&m.active).length} admins`;
+  $('#mb-list').innerHTML=list.map(m=>`<tr class="row"><td><b>${esc(m.full_name)}</b>${m.title?`<span class="sub">${esc(m.title)}</span>`:''}</td><td>${esc(m.email)}<span class="sub">${esc(m.phone||'')}</span></td><td class="nw">${m.role==='admin'?'<span class="pill blue">Admin</span>':'<span class="pill">Member</span>'}${m.user_id?'':' <span class="pill amber" title="Has not signed in yet">Not signed in</span>'}</td><td class="nw">${(m.langs||[]).map(l=>l.toUpperCase()).join(' · ')}</td><td>${db.checkins.filter(c=>c.member_id===m.id).length}</td><td class="nw">${obCell(m)}</td><td>${new Date(m.created_at).toLocaleDateString()}</td><td style="text-align:right;white-space:nowrap"><button class="btn sm" data-mb-edit="${m.id}">Edit</button> ${m.active?`<button class="btn sm d" data-mb-rm="${m.id}">Remove</button>`:`<button class="btn sm" data-mb-restore="${m.id}">Restore</button>`}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">No one here.</td></tr>';
+}
+$('#mb-q').addEventListener('input',renderMembers);
+$$('#mb-seg button').forEach(b=>b.onclick=()=>{ $$('#mb-seg button').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); mbF=b.dataset.f; renderMembers(); });
+$('#mb-new').onclick=()=>memberForm();
+$('#mb-csv').onclick=()=>csv('members.csv',[['Name','Email','Phone','Role','Languages','Title','Events attended','Joined','Active'],...db.members.map(m=>[m.full_name,m.email,m.phone||'',m.role,(m.langs||[]).join('/'),m.title||'',db.checkins.filter(c=>c.member_id===m.id).length,new Date(m.created_at).toLocaleDateString(),m.active?'yes':'no'])]);
+function memberForm(m){ const v=k=>esc(m&&m[k]||'');
+  modal(`<h2>${m?'Edit member':'Add member'}</h2>
+    <div class="field"><label>Full name</label><input id="f-name" value="${v('full_name')}"></div>
+    <div class="row"><div class="field"><label>Email (their eXp email — this is the sign-in)</label><input id="f-email" type="email" value="${v('email')}"></div><div class="field"><label>Phone</label><input id="f-phone" value="${v('phone')}"></div></div>
+    <div class="row"><div class="field"><label>Role</label><select id="f-role"><option value="member" ${m&&m.role==='member'?'selected':''}>Member</option><option value="admin" ${m&&m.role==='admin'?'selected':''}>Admin</option></select></div><div class="field"><label>Languages</label><select id="f-langs"><option value="en">English</option><option value="es" ${m&&String(m.langs)==='es'?'selected':''}>Español</option><option value="en,es" ${m&&(m.langs||[]).length===2?'selected':''}>English + Español</option></select></div></div>
+    <div class="field"><label>Title (e.g., REALTOR®, Team Lead)</label><input id="f-title" value="${v('title')}"></div>
+    <div class="row"><div class="field"><label>New-agent onboarding checklist</label><select id="f-onb"><option value="">Off</option><option value="1" ${m&&m.onboarding?'selected':''}>Show on their Home screen</option></select></div><div class="field"><label>Mentor</label><select id="f-mentor"><option value="">—</option>${active().filter(x=>!m||x.id!==m.id).map(x=>`<option value="${x.id}" ${m&&m.mentor_id===x.id?'selected':''}>${esc(x.full_name)}</option>`).join('')}</select></div></div>
+    ${m&&m.onboarding?`<div class="field"><label>Progress</label><div class="chips">${db.obSteps.map(st=>{ const d=db.obProg.some(p=>p.member_id===m.id&&p.step_id===st.id); return `<span class="${d?'ok':''}" data-ob-toggle="${st.id}" data-on="${d}" style="cursor:pointer" title="Click to toggle">${d?'✓ ':''}${esc(st.title)}</span>`; }).join('')}</div></div>`:''}
+    <div class="actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn p" id="f-save">${m?'Save':'Add member'}</button></div>`);
+  $$('[data-ob-toggle]').forEach(c=>c.onclick=async()=>{ const on=c.dataset.on==='true'; if(on) await q(sb.from('onboarding_progress').delete().match({member_id:m.id,step_id:c.dataset.obToggle}),'ob'); else await q(sb.from('onboarding_progress').insert({member_id:m.id,step_id:c.dataset.obToggle}),'ob'); await loadAll(); renderAll(); memberForm(db.members.find(x=>x.id===m.id)); });
+  $('#f-save').onclick=async()=>{ const row={full_name:$('#f-name').value.trim(),email:$('#f-email').value.trim().toLowerCase(),phone:$('#f-phone').value.trim()||null,role:$('#f-role').value,langs:$('#f-langs').value.split(','),title:$('#f-title').value.trim()||null,onboarding:!!$('#f-onb').value,mentor_id:$('#f-mentor').value||null}; if(!row.full_name||!row.email.includes('@')) return; if(row.onboarding&&!(m&&m.onboarding)) row.onboarding_started_at=new Date().toISOString();
+    try{ if(m) await q(sb.from('members').update(row).eq('id',m.id),'mb'); else await q(sb.from('members').insert({...row,active:true}),'mb'); }catch(e){ toast(e.message); return; }
+    closeModal(); await loadAll(); renderAll(); toast(m?'Saved':'Member added — they can sign in to the app now.'); };
+}
+document.addEventListener('click',async e=>{
+  const ed=e.target.closest('[data-mb-edit]'); if(ed) return memberForm(db.members.find(m=>m.id===ed.dataset.mbEdit));
+  const rm=e.target.closest('[data-mb-rm]'); if(rm){ const m=db.members.find(x=>x.id===rm.dataset.mbRm); if(!confirm(`Remove ${m.full_name}'s access?`)) return; await q(sb.from('members').update({active:false}).eq('id',m.id),'rm'); await loadAll(); renderAll(); return; }
+  const rs=e.target.closest('[data-mb-restore]'); if(rs){ await q(sb.from('members').update({active:true}).eq('id',rs.dataset.mbRestore),'rs'); await loadAll(); renderAll(); }
+});
+
+/* ---------- events ---------- */
+let evF='upcoming';
+function renderEvents(){
+  const now=new Date(); let list=db.events.filter(e=>evF==='upcoming'?new Date(e.starts_at)>=now:new Date(e.starts_at)<now); if(evF==='past') list=list.slice().reverse();
+  $('#ev-count').textContent=`${db.events.filter(e=>new Date(e.starts_at)>=now).length} upcoming`;
+  $('#ev-list').innerHTML=list.map(e=>{ const code=(db.codes.find(c=>c.event_id===e.id)||{}).code; return `<tr class="row"><td style="white-space:nowrap">${fmtD(e.starts_at)}<span class="sub">${fmtT(e.starts_at)} · ${e.duration_min} min</span></td><td><b>${esc(e.title)}</b><span class="sub">${esc(e.kind||'')} · ${esc(e.lang||'')}${e.series_rule?' · ↻ '+({w1:'weekly',w2:'every 2 weeks',m:'monthly'})[e.series_rule]:''}</span></td><td>${esc(e.location||'')}</td><td>${rsvpN(e.id)}</td><td>${ciN(e.id)}${rsvpN(e.id)?` <span class="sub">${Math.round(ciN(e.id)/rsvpN(e.id)*100)}%</span>`:''}</td><td style="font-family:var(--display);color:var(--amber)">${code||'—'}</td><td style="text-align:right;white-space:nowrap"><button class="btn sm" data-ev-att="${e.id}">Attendance</button> <button class="btn sm d" data-ev-del="${e.id}">Delete</button></td></tr>`; }).join('')||'<tr><td colspan="7" class="empty">Nothing here.</td></tr>';
+}
+$$('#ev-seg button').forEach(b=>b.onclick=()=>{ $$('#ev-seg button').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); evF=b.dataset.f; renderEvents(); });
+$('#ev-csv').onclick=()=>csv('attendance.csv',[['Event','Date','Member','Email','RSVP','Checked in','Time'],...db.events.flatMap(e=>{ const ids=new Set([...db.rsvps.filter(r=>r.event_id===e.id).map(r=>r.member_id),...db.checkins.filter(c=>c.event_id===e.id).map(c=>c.member_id)]); return [...ids].map(id=>{ const m=db.members.find(x=>x.id===id)||{}; const c=db.checkins.find(x=>x.event_id===e.id&&x.member_id===id); return [e.title,new Date(e.starts_at).toLocaleString(),m.full_name||'',m.email||'',db.rsvps.some(r=>r.event_id===e.id&&r.member_id===id)?'yes':'no',c?'yes':'no',c?new Date(c.checked_at).toLocaleString():'']; }); })]);
+function seriesDates(start,rule,n){ n=Math.min(Math.max(n||1,1),26); const out=[]; if(rule==='m'){ const wd=start.getDay(), nth=Math.ceil(start.getDate()/7); for(let k=0;k<n;k++){ const y=start.getFullYear(), m=start.getMonth()+k; const first=new Date(y,m,1); let d=1+((wd-first.getDay()+7)%7)+(nth-1)*7; const dim=new Date(y,m+1,0).getDate(); while(d>dim) d-=7; out.push(new Date(y,m,d,start.getHours(),start.getMinutes())); } } else { const step=rule==='w2'?14:7; for(let k=0;k<n;k++){ const d=new Date(start); d.setDate(d.getDate()+k*step); out.push(d); } } return out; }
+$('#ev-new').onclick=()=>{
+  modal(`<h2>New event</h2>
+    <div class="field"><label>Title</label><input id="f-title"></div>
+    <div class="row"><div class="field"><label>Date & time</label><input id="f-when" type="datetime-local"></div><div class="field"><label>Length (min)</label><input id="f-dur" type="number" value="60" min="15" step="15"></div></div>
+    <div class="row"><div class="field"><label>Where</label><select id="f-where">${db.rooms.map(r=>`<option>${esc(r.name)}</option>`).join('')}<option>Zoom</option></select></div><div class="field"><label>Language</label><select id="f-lang"><option>EN</option><option>ES</option><option>EN/ES</option></select></div></div>
+    <div class="row"><div class="field"><label>Type</label><select id="f-kind"><option>Training</option><option>Mastermind</option><option>Community</option><option>Event</option></select></div><div class="field"><label>Repeats</label><select id="f-rep"><option value="">Does not repeat</option><option value="w1">Weekly</option><option value="w2">Every 2 weeks</option><option value="m">Monthly (same weekday)</option></select></div><div class="field"><label>Times</label><input id="f-n" type="number" value="8" min="2" max="26"></div></div>
+    <div class="field"><label>Description</label><textarea id="f-desc"></textarea></div>
+    <div class="actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn p" id="f-save">Post</button></div>`);
+  $('#f-save').onclick=async()=>{ const title=$('#f-title').value.trim(), when=$('#f-when').value; if(!title||!when) return;
+    const base={title,duration_min:+$('#f-dur').value||60,location:$('#f-where').value,lang:$('#f-lang').value,kind:$('#f-kind').value,description:$('#f-desc').value,created_by:db.me.id}; const rep=$('#f-rep').value;
+    try{ if(!rep) await q(sb.from('events').insert({...base,starts_at:new Date(when).toISOString()}),'ev'); else { const sid=crypto.randomUUID(); const ds=seriesDates(new Date(when),rep,+$('#f-n').value||8); await q(sb.from('events').insert(ds.map((d,i)=>({...base,starts_at:d.toISOString(),series_id:sid,series_seq:i+1,series_rule:rep}))),'ev'); } }catch(e){ toast(e.message); return; }
+    closeModal(); await loadAll(); renderAll(); toast('Posted'); };
+};
+document.addEventListener('click',async e=>{
+  const d=e.target.closest('[data-ev-del]'); if(d){ const ev=db.events.find(x=>x.id===d.dataset.evDel); const all=ev.series_id&&confirm('This is part of a series. OK = delete this and all future ones · Cancel = just this one'); if(!ev.series_id&&!confirm('Delete this event?')) return; if(all) await q(sb.from('events').delete().eq('series_id',ev.series_id).gte('starts_at',ev.starts_at),'del'); else await q(sb.from('events').delete().eq('id',ev.id),'del'); await loadAll(); renderAll(); return; }
+  const a=e.target.closest('[data-ev-att]'); if(a) attendance(db.events.find(x=>x.id===a.dataset.evAtt));
+});
+function attendance(ev){
+  const ids=new Set([...db.rsvps.filter(r=>r.event_id===ev.id).map(r=>r.member_id),...db.checkins.filter(c=>c.event_id===ev.id).map(c=>c.member_id)]);
+  const rows=[...ids].map(id=>{ const m=db.members.find(x=>x.id===id)||{}; const c=db.checkins.find(x=>x.event_id===ev.id&&x.member_id===id); return {id,name:m.full_name||'—',rsvp:db.rsvps.some(r=>r.event_id===ev.id&&r.member_id===id),in:!!c,at:c?c.checked_at:''}; }).sort((a,b)=>(b.in-a.in)||a.name.localeCompare(b.name));
+  const code=(db.codes.find(c=>c.event_id===ev.id)||{}).code;
+  modal(`<h2>${esc(ev.title)}</h2><p style="color:var(--muted);margin:0 0 6px">${fmtDT(ev.starts_at)} · ${esc(ev.location||'')}</p><p style="margin:0 0 14px">Check-in code: <b style="font-family:var(--display);color:var(--amber);font-size:20px">${code||'—'}</b> &nbsp;·&nbsp; ${rows.filter(r=>r.in).length} checked in / ${rows.filter(r=>r.rsvp).length} RSVP'd</p>
+    <div class="field"><label>Add someone who didn't RSVP</label><select id="att-add"><option value="">Choose a member…</option>${active().filter(m=>!ids.has(m.id)).map(m=>`<option value="${m.id}">${esc(m.full_name)}</option>`).join('')}</select></div>
+    <table style="margin-top:10px"><thead><tr><th>Member</th><th>RSVP</th><th>Checked in</th><th></th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${r.rsvp?'✓':''}</td><td>${r.in?'<span class="pill on">✓ '+(r.at?fmtT(r.at):'')+'</span>':'<span class="pill">—</span>'}</td><td style="text-align:right"><button class="btn sm" data-att-toggle="${r.id}" data-on="${r.in}">${r.in?'Unmark':'Mark present'}</button></td></tr>`).join('')||'<tr><td colspan="4" class="empty">No RSVPs yet.</td></tr>'}</tbody></table>
+    <div class="actions"><button class="btn" onclick="closeModal()">Close</button></div>`);
+  $('#att-add').onchange=async()=>{ const id=$('#att-add').value; if(!id) return; await q(sb.from('checkins').insert({event_id:ev.id,member_id:id,by_admin:true}),'att'); await loadAll(); renderAll(); attendance(ev); };
+  $$('[data-att-toggle]').forEach(b=>b.onclick=async()=>{ const id=b.dataset.attToggle, on=b.dataset.on==='true'; if(on) await q(sb.from('checkins').delete().match({event_id:ev.id,member_id:id}),'att'); else await q(sb.from('checkins').insert({event_id:ev.id,member_id:id,by_admin:true}),'att'); await loadAll(); renderAll(); attendance(ev); });
+}
+
+/* ---------- rooms ---------- */
+let weekOff=0;
+function renderRooms(){
+  const now=new Date(); const mon=new Date(now); mon.setHours(0,0,0,0); mon.setDate(mon.getDate()-((mon.getDay()+6)%7)+weekOff*7);
+  const days=[...Array(7)].map((_,i)=>{ const d=new Date(mon); d.setDate(d.getDate()+i); return d; });
+  $('#rm-week').textContent=`${days[0].toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${days[6].toLocaleDateString('en-US',{month:'short',day:'numeric'})}`;
+  const isToday=d=>d.toDateString()===now.toDateString();
+  let h=`<div class="h"></div>${days.map(d=>`<div class="h" style="${isToday(d)?'color:#fff':''}">${d.toLocaleDateString('en-US',{weekday:'short'})} ${d.getDate()}</div>`).join('')}`;
+  db.rooms.forEach(r=>{ h+=`<div class="rn">${esc(r.name)}</div>`+days.map(d=>{ const d1=new Date(d.getTime()+864e5); const bks=db.bookings.filter(b=>b.room_id===r.id&&new Date(b.starts_at)>=d&&new Date(b.starts_at)<d1).sort((a,b)=>a.starts_at.localeCompare(b.starts_at)); return `<div class="cell ${isToday(d)?'today':''}">${bks.map(b=>`<div class="bk" data-bk="${b.id}" title="Click to cancel">${fmtT(b.starts_at).replace(':00','')}–${fmtT(b.ends_at).replace(':00','')}<small>${esc(memberName(b.member_id).split(' ')[0])}${b.note?' · '+esc(b.note):''}</small></div>`).join('')}</div>`; }).join(''); });
+  $('#rm-grid').innerHTML=h;
+}
+$('#rm-prev').onclick=()=>{ weekOff--; renderRooms(); }; $('#rm-next').onclick=()=>{ weekOff++; renderRooms(); }; $('#rm-today').onclick=()=>{ weekOff=0; renderRooms(); };
+document.addEventListener('click',async e=>{ const b=e.target.closest('[data-bk]'); if(!b) return; const bk=db.bookings.find(x=>x.id===b.dataset.bk); if(!confirm(`Cancel ${memberName(bk.member_id)}'s booking of ${roomName(bk.room_id)} on ${fmtDT(bk.starts_at)}?`)) return; await q(sb.from('bookings').delete().eq('id',bk.id),'bk'); await loadAll(); renderAll(); toast('Booking cancelled'); });
+
+/* ---------- announcements ---------- */
+function renderAnns(){
+  $('#an-list').innerHTML=db.anns.map(a=>{ const n=db.annReads.filter(r=>r.announcement_id===a.id).length, tot=active().length; const pct=tot?Math.round(n/tot*100):0; const exp=a.expires_at&&new Date(a.expires_at)<new Date(); return `<tr class="row"><td><b>${a.pinned?'📌 ':''}${esc(a.title)}</b><span class="sub">${esc(a.body).slice(0,120)}${exp?' · <span style="color:var(--dim)">expired</span>':''}</span></td><td style="white-space:nowrap">${fmtD(a.created_at)}<span class="sub">${esc(memberName(a.created_by).split(' ')[0])}</span></td><td style="min-width:170px"><div class="bar" style="margin:0"><span class="tr"><i style="width:${pct}%;background:${pct>=70?'var(--green)':pct>=40?'var(--amber)':'var(--coral)'}"></i></span><span class="v">${n}/${tot}</span></div></td><td style="text-align:right;white-space:nowrap"><button class="btn sm" data-an-who="${a.id}">Who</button> <button class="btn sm" data-an-edit="${a.id}">Edit</button> <button class="btn sm d" data-an-del="${a.id}">Delete</button></td></tr>`; }).join('')||'<tr><td colspan="4" class="empty">No announcements yet.</td></tr>';
+}
+function annForm(a){ const v=k=>esc(a&&a[k]||'');
+  modal(`<h2>${a?'Edit announcement':'Post announcement'}</h2>
+    <div class="field"><label>Title</label><input id="f-title" value="${v('title')}"></div>
+    <div class="field"><label>Message</label><textarea id="f-body" rows="5">${v('body')}</textarea></div>
+    <div class="row"><div class="field"><label>Spanish title (optional)</label><input id="f-title-es" value="${v('title_es')}"></div></div>
+    <div class="field"><label>Spanish message (optional)</label><textarea id="f-body-es" rows="3">${v('body_es')}</textarea></div>
+    <div class="row"><div class="field"><label>Pin to top</label><select id="f-pin"><option value="">No</option><option value="1" ${a&&a.pinned?'selected':''}>Yes</option></select></div><div class="field"><label>Hide after</label><input id="f-exp" type="date" value="${a&&a.expires_at?String(a.expires_at).slice(0,10):''}"></div></div>
+    ${a?'':'<p style="color:var(--muted);font-size:12px">Also posts to #general in the app so everyone gets a push notification.</p>'}
+    <div class="actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn p" id="f-save">${a?'Save':'Post'}</button></div>`);
+  $('#f-save').onclick=async()=>{ const title=$('#f-title').value.trim(), body=$('#f-body').value.trim(); if(!title||!body) return; const row={title,body,title_es:$('#f-title-es').value.trim()||null,body_es:$('#f-body-es').value.trim()||null,pinned:!!$('#f-pin').value,expires_at:$('#f-exp').value?new Date($('#f-exp').value+'T23:59:59').toISOString():null};
+    try{ if(a) await q(sb.from('announcements').update(row).eq('id',a.id),'an'); else await q(sb.from('announcements').insert({...row,created_by:db.me.id}),'an'); }catch(e){ toast(e.message); return; } closeModal(); await loadAll(); renderAll(); toast(a?'Saved':'Posted'); };
+}
+$('#an-new').onclick=()=>annForm();
+document.addEventListener('click',async e=>{
+  const ed=e.target.closest('[data-an-edit]'); if(ed) return annForm(db.anns.find(a=>a.id===ed.dataset.anEdit));
+  const dl=e.target.closest('[data-an-del]'); if(dl){ if(!confirm('Delete this announcement?')) return; await q(sb.from('announcements').delete().eq('id',dl.dataset.anDel),'an'); await loadAll(); renderAll(); return; }
+  const w=e.target.closest('[data-an-who]'); if(w){ const a=db.anns.find(x=>x.id===w.dataset.anWho); const ids=new Set(db.annReads.filter(r=>r.announcement_id===a.id).map(r=>r.member_id)); const rd=active().filter(m=>ids.has(m.id)), nr=active().filter(m=>!ids.has(m.id));
+    modal(`<h2>${esc(a.title)}</h2><p style="color:var(--muted)">Read by ${rd.length} of ${active().length}</p><div class="chips">${rd.map(m=>`<span class="ok">✓ ${esc(m.full_name)}</span>`).join('')}</div>${nr.length?`<p style="margin:16px 0 6px;color:var(--muted)">Haven't seen it (${nr.length})</p><div class="chips">${nr.map(m=>`<span>${esc(m.full_name)}</span>`).join('')}</div>`:''}<div class="actions"><button class="btn" onclick="closeModal()">Close</button></div>`); }
+});
+
+/* ---------- partners ---------- */
+let ptF='';
+const PT={lender:'Lender',title:'Title',vendor:'Vendor',community:'Community'};
+function renderPartners(){
+  const qv=($('#pt-q').value||'').toLowerCase(); const list=db.partners.filter(p=>p.active!==false).filter(p=>!ptF||p.category===ptF).filter(p=>!qv||[p.name,p.contact_name||''].join(' ').toLowerCase().includes(qv));
+  $('#pt-count').textContent=`${db.partners.filter(p=>p.active!==false).length} partners`;
+  $('#pt-list').innerHTML=list.map(p=>`<tr class="row"><td><b>${esc(p.name)}</b></td><td><span class="pill">${PT[p.category]||p.category}</span></td><td>${esc(p.contact_name||'')}</td><td>${esc(p.phone||'')}<span class="sub">${esc(p.email||'')}</span></td><td>${(p.langs||[]).map(l=>l.toUpperCase()).join(' · ')}</td><td style="text-align:right;white-space:nowrap"><button class="btn sm" data-pt-edit="${p.id}">Edit</button> <button class="btn sm d" data-pt-rm="${p.id}">Remove</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty">No partners.</td></tr>';
+}
+$('#pt-q').addEventListener('input',renderPartners);
+$$('#pt-seg button').forEach(b=>b.onclick=()=>{ $$('#pt-seg button').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); ptF=b.dataset.f; renderPartners(); });
+function partnerForm(p){ const v=k=>esc(p&&p[k]||'');
+  modal(`<h2>${p?'Edit partner':'Add partner'}</h2>
+    <div class="field"><label>Company</label><input id="f-name" value="${v('name')}"></div>
+    <div class="row"><div class="field"><label>Type</label><select id="f-cat">${Object.keys(PT).map(c=>`<option value="${c}" ${p&&p.category===c?'selected':''}>${PT[c]}</option>`).join('')}</select></div><div class="field"><label>Languages</label><select id="f-langs"><option value="en">English</option><option value="es" ${p&&String(p.langs)==='es'?'selected':''}>Español</option><option value="en,es" ${p&&(p.langs||[]).length===2?'selected':''}>English + Español</option></select></div></div>
+    <div class="field"><label>Contact name</label><input id="f-contact" value="${v('contact_name')}"></div>
+    <div class="row"><div class="field"><label>Phone</label><input id="f-phone" value="${v('phone')}"></div><div class="field"><label>Email</label><input id="f-email" value="${v('email')}"></div></div>
+    <div class="field"><label>Website</label><input id="f-web" value="${v('website')}"></div>
+    <div class="field"><label>Logo (image URL — img/partners/… or https://…)</label><input id="f-logo" value="${v('logo_url')}"></div>
+    <div class="field"><label>Notes (programs, DPA, specialties)</label><textarea id="f-notes">${v('notes')}</textarea></div>
+    <div class="actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn p" id="f-save">${p?'Save':'Add'}</button></div>`);
+  $('#f-save').onclick=async()=>{ const name=$('#f-name').value.trim(); if(!name) return; const row={name,category:$('#f-cat').value,langs:$('#f-langs').value.split(','),contact_name:$('#f-contact').value.trim()||null,phone:$('#f-phone').value.trim()||null,email:$('#f-email').value.trim()||null,website:$('#f-web').value.trim()||null,logo_url:$('#f-logo').value.trim()||null,notes:$('#f-notes').value.trim()||null};
+    try{ if(p) await q(sb.from('partners').update(row).eq('id',p.id),'pt'); else await q(sb.from('partners').insert(row),'pt'); }catch(e){ toast(e.message); return; } closeModal(); await loadAll(); renderAll(); toast('Saved'); };
+}
+$('#pt-new').onclick=()=>partnerForm();
+document.addEventListener('click',async e=>{ const ed=e.target.closest('[data-pt-edit]'); if(ed) return partnerForm(db.partners.find(p=>p.id===ed.dataset.ptEdit)); const rm=e.target.closest('[data-pt-rm]'); if(rm){ const p=db.partners.find(x=>x.id===rm.dataset.ptRm); if(!confirm(`Remove ${p.name}?`)) return; await q(sb.from('partners').update({active:false}).eq('id',p.id),'pt'); await loadAll(); renderAll(); } });
+
+/* ---------- resources ---------- */
+let rsF='';
+function renderResources(){
+  const qv=($('#rs-q').value||'').toLowerCase(); const list=db.resources.filter(r=>!rsF||r.category===rsF).filter(r=>!qv||[r.title,r.description||''].join(' ').toLowerCase().includes(qv));
+  $('#rs-count').textContent=`${db.resources.length} items`;
+  $('#rs-list').innerHTML=list.map(r=>`<tr class="row"><td><b>${esc(r.title)}</b><span class="sub">${esc(r.description||'')}</span></td><td><span class="pill">${esc(r.category)}</span></td><td>${r.kind==='file'?'File':`<a href="${esc(r.url)}" target="_blank" rel="noopener">Link ↗</a>`}</td><td>${r.pinned?'📌':''}</td><td style="text-align:right;white-space:nowrap"><button class="btn sm" data-rs-pin="${r.id}">${r.pinned?'Unpin':'Pin'}</button> <button class="btn sm" data-rs-edit="${r.id}">Edit</button> <button class="btn sm d" data-rs-del="${r.id}">Delete</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">Nothing here.</td></tr>';
+}
+$('#rs-q').addEventListener('input',renderResources);
+$$('#rs-seg button').forEach(b=>b.onclick=()=>{ $$('#rs-seg button').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); rsF=b.dataset.f; renderResources(); });
+function resForm(r){ const v=k=>esc(r&&r[k]||''); const cats=['Forms','Training','Toolkits','Office','Partners','Community'];
+  modal(`<h2>${r?'Edit resource':'Add link'}</h2>
+    <div class="field"><label>Title</label><input id="f-title" value="${v('title')}"></div>
+    <div class="field"><label>Spanish title (optional)</label><input id="f-title-es" value="${v('title_es')}"></div>
+    <div class="row"><div class="field"><label>Category</label><select id="f-cat">${cats.map(c=>`<option ${r&&r.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="field"><label>Language</label><select id="f-lang"><option ${r&&r.lang==='EN'?'selected':''}>EN</option><option ${r&&r.lang==='ES'?'selected':''}>ES</option><option ${r&&r.lang==='EN/ES'?'selected':''}>EN/ES</option></select></div></div>
+    ${r&&r.kind==='file'?'':`<div class="field"><label>Link (https://…)</label><input id="f-url" value="${v('url')}"></div>`}
+    <div class="field"><label>Description</label><input id="f-desc" value="${v('description')}"></div>
+    <div class="field"><label>Spanish description (optional)</label><input id="f-desc-es" value="${v('description_es')}"></div>
+    <div class="actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn p" id="f-save">${r?'Save':'Add'}</button></div>`);
+  $('#f-save').onclick=async()=>{ const title=$('#f-title').value.trim(); if(!title) return; const row={title,title_es:$('#f-title-es').value.trim()||null,category:$('#f-cat').value,lang:$('#f-lang').value,description:$('#f-desc').value.trim()||null,description_es:$('#f-desc-es').value.trim()||null}; const u=$('#f-url'); if(u){ row.url=u.value.trim(); row.kind='link'; if(!/^https?:\/\//.test(row.url)) { toast('Link must start with https://'); return; } }
+    try{ if(r) await q(sb.from('resources').update(row).eq('id',r.id),'rs'); else await q(sb.from('resources').insert({...row,created_by:db.me.id}),'rs'); }catch(e){ toast(e.message); return; } closeModal(); await loadAll(); renderAll(); toast('Saved'); };
+}
+$('#rs-new').onclick=()=>resForm();
+document.addEventListener('click',async e=>{ const ed=e.target.closest('[data-rs-edit]'); if(ed) return resForm(db.resources.find(r=>r.id===ed.dataset.rsEdit)); const p=e.target.closest('[data-rs-pin]'); if(p){ const r=db.resources.find(x=>x.id===p.dataset.rsPin); await q(sb.from('resources').update({pinned:!r.pinned}).eq('id',r.id),'rs'); await loadAll(); renderAll(); return; } const d=e.target.closest('[data-rs-del]'); if(d){ if(!confirm('Delete this resource?')) return; await q(sb.from('resources').delete().eq('id',d.dataset.rsDel),'rs'); await loadAll(); renderAll(); } });
+
+/* ---------- settings / weekly email ---------- */
+async function renderSettings(){
+  const {data}=await sb.from('app_settings').select('value').eq('key','weekly_note').maybeSingle(); const v=(data&&data.value)||{};
+  $('#wn-subj').value=v.subject||''; $('#wn-body').value=v.body||''; $('#wn-es').value=v.body_es||'';
+  const on=active().filter(m=>!(m.prefs&&m.prefs.digest===false)), off=active().filter(m=>m.prefs&&m.prefs.digest===false);
+  $('#wn-who').innerHTML=`<p style="margin:0 0 8px"><b>${on.length}</b> members receive it · <b>${off.length}</b> opted out</p><div class="chips">${on.map(m=>`<span class="ok">${esc(m.full_name)}</span>`).join('')}${off.map(m=>`<span>${esc(m.full_name)} (off)</span>`).join('')}</div><p style="color:var(--muted);font-size:12px;margin-top:14px">Sends Mondays at 7 AM. Leave the message empty and a short standing note is used.</p>`;
+}
+async function saveNote(){ const value={subject:$('#wn-subj').value.trim()||null,body:$('#wn-body').value.trim(),body_es:$('#wn-es').value.trim()||null}; await q(sb.from('app_settings').upsert({key:'weekly_note',value,updated_at:new Date().toISOString()}),'note'); }
+$('#wn-save').onclick=async()=>{ try{ await saveNote(); toast('Saved'); }catch(e){ toast(e.message); } };
+$('#wn-test').onclick=async()=>{ try{ await saveNote(); const {data,error}=await sb.rpc('send_digest_test'); toast(!error&&data==='ok'?'Test sent — check your email in a minute.':(error?error.message:'Only admins can send tests.')); }catch(e){ toast(e.message); } };
+</script>
+</body>
+</html>
