@@ -600,7 +600,8 @@ function renderEvents(){
 $$('#ev-seg button').forEach(b=>b.addEventListener('click',()=>{ $$('#ev-seg button').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); evFilter=b.dataset.f; renderEvents(); }));
 document.addEventListener('click', e=>{
   const b=e.target.closest('[data-ev]'); if(!b) return;
-  const ev=normEvent(store.event(b.dataset.ev)); const mine=store.mine(ev.id);
+  const raw=store.event(b.dataset.ev); if(!raw){ toast(state.lang==='es'?'Sesión privada del Center.':'Private Center session.'); return; }
+  const ev=normEvent(raw); const mine=store.mine(ev.id);
   openSheet(`<span class="eyebrow coral">${esc(L(ev,'kind')||'')} · ${ev.lang||''}</span><h2 style="margin-top:8px">${esc(L(ev,'title'))}</h2>
     <p class="meta">${fmtDay(ev.when)} · ${fmtTime(ev.when)} · ${ev.dur} min · ${esc(ev.where)}${ev.series_rule?` · <span style="color:var(--amber)">↻ ${seriesLabel(ev)}</span>`:''}${ev.invite_only?` · <span style="color:var(--amber)">🔒 ${state.lang==='es'?'Solo con invitación':'Invite only'}</span>`:''}</p>
     ${ev.invite_only&&!isAdmin()?`<p class="note" style="margin-top:6px">${state.lang==='es'?'Estás en la lista de invitados de esta sesión.':'You are on the invite list for this session.'}</p>`:''}
@@ -716,7 +717,7 @@ function roomsTodayHTML(){
   const todays=store.bookings().filter(b=>new Date(b.starts_at)>=d0 && new Date(b.starts_at)<d1).sort((a,b)=>a.starts_at.localeCompare(b.starts_at));
   if(!todays.length) return `<div class="card" style="color:var(--muted);font-size:14px">${state.lang==='es'?'Ninguna sala reservada hoy. Todo está libre.':'No rooms booked today. Everything is open.'}</div>`;
   return todays.map(b=>{ const r=normRoom(store.rooms().find(x=>x.id===b.room_id)||{}); const m=store.members().find(x=>x.id===b.member_id); const live=new Date(b.starts_at)<=now && new Date(b.ends_at)>now; const over=new Date(b.ends_at)<=now;
-    return `<button class="item" data-binfo="${b.id}" style="${over?'opacity:.5':''}"><div class="ic ${r.ic||'b'}">${r.sym||'▢'}</div><div class="tx"><b>${esc(L(r,'name')||'')}${b.note?` · <span style="font-weight:500;color:var(--muted)">${esc(b.note)}</span>`:''}</b><small>${fmtTime(b.starts_at)}–${fmtTime(b.ends_at)} · ${esc(m?m.full_name:'')}${b.member_id===db.me.id?(state.lang==='es'?' (tú)':' (you)'):''}</small></div><span class="r">${live?`<span class="pill busy">${state.lang==='es'?'Ahora':'Now'}</span>`:''}</span></button>`; }).join('');
+    return `<button class="item" ${b.event_id?`data-ev="${b.event_id}"`:`data-binfo="${b.id}"`} style="${over?'opacity:.5':''}"><div class="ic ${r.ic||'b'}">${b.event_id?'▦':(r.sym||'▢')}</div><div class="tx"><b>${esc(L(r,'name')||'')}${b.note?` · <span style="font-weight:500;color:var(--muted)">${esc(b.note)}</span>`:''}</b><small>${fmtTime(b.starts_at)}–${fmtTime(b.ends_at)} · ${b.event_id?(state.lang==='es'?'Evento del Center':'Center event'):esc(m?m.full_name:'')+(b.member_id===db.me.id?(state.lang==='es'?' (tú)':' (you)'):'')}</small></div><span class="r">${live?`<span class="pill busy">${state.lang==='es'?'Ahora':'Now'}</span>`:''}</span></button>`; }).join('');
 }
 function roomStatus(r){
   if (r.soon) return `<span class="pill soon">${t('sp.soon')}</span>`;
@@ -725,7 +726,7 @@ function roomStatus(r){
 }
 function renderSpaces(){
   $('#sp-list').innerHTML = store.rooms().map(normRoom).map(r=>`<button class="item" data-room="${r.id}" ${r.soon?'disabled style="opacity:.6"':''}><div class="ic ${r.ic}">${r.sym}</div><div class="tx"><b>${esc(L(r,'name'))}</b><small>${esc(L(r,'meta')||'')}${todayTimes(r)}</small></div><span class="r">${roomStatus(r)}</span></button>`).join('');
-  const mine=store.bookings().filter(b=>b.member_id===db.me.id && new Date(b.ends_at)>new Date()).sort((a,b)=>a.starts_at.localeCompare(b.starts_at));
+  const mine=store.bookings().filter(b=>b.member_id===db.me.id && !b.event_id && new Date(b.ends_at)>new Date()).sort((a,b)=>a.starts_at.localeCompare(b.starts_at));
   $('#sp-mine').innerHTML = mine.map(b=>{ const r=normRoom(store.rooms().find(x=>x.id===b.room_id)); return `<button class="item" data-bcal="${b.id}"><div class="ic ${r.ic}">${r.sym}</div><div class="tx"><b>${esc(L(r,'name'))}${b.note?` · <span style="font-weight:500;color:var(--muted)">${esc(b.note)}</span>`:''}</b><small>${fmtDay(b.starts_at)} · ${fmtTime(b.starts_at)}–${fmtTime(b.ends_at)}</small></div><span class="r">›</span></button>`; }).join('') || `<div class="empty">${t('sp.none')}</div>`;
 }
 // Booking rules. Common Space: weekdays after 5 PM only, weekends all day. Other rooms: 8 AM – 8 PM.
@@ -738,7 +739,7 @@ function bookingCalSheet(b){
   openSheet(`<h2>${esc(L(r,'name'))}</h2><p class="meta">${fmtDay(b.starts_at)} · ${fmtTime(b.starts_at)}–${fmtTime(b.ends_at)}</p>${b.note?`<p class="body">${esc(b.note)}</p>`:''}
     <p class="meta" style="margin-top:14px">${state.lang==='es'?'Agregar a tu calendario':'Add to your calendar'}</p>
     <div class="actions" style="margin-top:8px">${calButtons({title:(state.lang==='es'?'Reserva: ':'Room: ')+L(r,'name')+' · Culture Center',start:b.starts_at,end:b.ends_at,location:'eXp Culture Center Louisville, 8923 Stone Green Way Suite 200',desc:L(r,'meta')||'',uid:b.id})}</div>
-    <p class="note" style="text-align:center;margin-top:18px"><button data-release="${b.id}" style="color:var(--red);font-weight:600">${t('sp.release')}</button></p>`);
+    ${b.event_id?'':`<p class="note" style="text-align:center;margin-top:18px"><button data-release="${b.id}" style="color:var(--red);font-weight:600">${t('sp.release')}</button></p>`}`);
 }
 document.addEventListener('click', async e=>{
   const bc=e.target.closest('[data-bcal]'); if (bc){ const b=store.bookings().find(x=>x.id===bc.dataset.bcal); if(b) bookingCalSheet(b); return; }
@@ -766,7 +767,7 @@ document.addEventListener('click', async e=>{
       ${rule?`<p class="note" style="margin-top:6px">${rule}</p>`:''}
       <div class="days">${days.map(d=>`<button data-day="${d.i}" aria-pressed="${d.i===day}" class="${d.we?'we':''}">${d.mo?`<i>${d.mo}</i>`:''}${d.dow}<b>${d.n}</b></button>`).join('')}</div>
       <p class="meta" style="margin-top:12px">${a==null?(es?'Toca la hora de inicio':'Tap a start time'):(z==null?(es?'Toca la hora final (hasta 4 h) o reserva 1 hora':'Tap an end time (up to 4 h), or book the single hour'):summary)}</p>
-      <div class="slots">${hours.map(h=>{ const tk=taken(h); const mine=tk&&tk.member_id===db.me.id; const past=slotStart(h).getTime()+36e5<Date.now(); const inRange=lo!=null&&h>=lo&&h<=hi; return `<button class="slot ${tk?(mine?'mine':'busy'):(past?'busy':'')}" data-h="${h}" aria-pressed="${inRange}" title="${tk&&!mine?esc((store.members().find(m=>m.id===tk.member_id)||{}).full_name||''):''}">${hourLabel(h)}</button>`; }).join('')}</div>
+      <div class="slots">${hours.map(h=>{ const tk=taken(h); const mine=tk&&tk.member_id===db.me.id; const past=slotStart(h).getTime()+36e5<Date.now(); const inRange=lo!=null&&h>=lo&&h<=hi; return `<button class="slot ${tk?(mine?'mine':'busy'):(past?'busy':'')}" data-h="${h}" aria-pressed="${inRange}" title="${tk&&!mine?(tk.event_id?esc(tk.note||'Event'):esc((store.members().find(m=>m.id===tk.member_id)||{}).full_name||'')):''}">${hourLabel(h)}</button>`; }).join('')}</div>
       ${lo!=null?`<div class="field" style="margin-top:12px"><label>${es?'Para qué (opcional)':'What for (optional)'}</label><input id="bk-note" placeholder="${es?'Reunión con cliente, grabación, capacitación…':'Client meeting, recording, training…'}" value="${esc(note)}"></div>
       ${isAdmin()?`<div class="row"><div class="field"><label>${es?'Repetir cada semana':'Repeat weekly'}</label><select id="bk-weeks"><option value="1">${es?'Solo esta vez':'Just this once'}</option>${[2,3,4,6,8,12].map(n=>`<option value="${n}" ${weeks===n?'selected':''}>${n} ${es?'semanas':'weeks'}</option>`).join('')}</select></div></div>`:''}`:''}
       <div class="actions"><button class="btn btn-primary" id="book" ${lo==null?'disabled':''}>${lo==null?t('sp.book'):(es?'Reservar ':'Book ')+summary}</button></div>`);
