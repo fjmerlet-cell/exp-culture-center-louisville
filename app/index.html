@@ -247,6 +247,7 @@ input,select,textarea{font:inherit}
     <button class="stat" data-go="chat"><b id="h-unread">15</b><span data-i18n="home.unread">unread messages</span></button>
   </div>
   <div class="sec"><div class="sec-h"><h2 data-i18n="home.rooms">Rooms today</h2><button class="lnk" data-go="spaces" data-i18n="home.book">Book</button></div><div id="h-rooms"></div></div>
+  <div class="sec"><div class="sec-h"><h2 data-i18n="home.act">Recent activity</h2><button class="lnk" id="h-act-all" data-i18n="home.actall">See all</button></div><div id="h-act"></div></div>
   <div class="sec"><div class="sec-h"><h2 data-i18n="home.spot">Member spotlight</h2></div><div id="h-spot"></div></div>
   <div class="sec"><div class="sec-h"><h2 data-i18n="home.quick">Quick actions</h2></div>
     <div class="grid2">
@@ -318,6 +319,7 @@ input,select,textarea{font:inherit}
     </div>
   </div>
   <div class="sec" id="admin-sec" hidden><div class="sec-h"><h2 data-i18n="more.admin">Admin</h2></div>
+    <button class="item" id="adm-act"><div class="ic b">◷</div><div class="tx"><b data-i18n="adm7">Activity log</b><small data-i18n="adm7s">Includes website inquiries and announcement reads</small></div><span class="r"><span class="pill busy" id="adm-act-n" hidden></span></span></button>
     <button class="item" id="adm-note"><div class="ic a">✉️</div><div class="tx"><b data-i18n="adm6">Weekly note</b><small data-i18n="adm6s">Your message at the top of Monday's digest email</small></div></button>
     <button class="item" id="adm-ann"><div class="ic v">📣</div><div class="tx"><b data-i18n="adm5">Post an announcement</b><small data-i18n="adm5s">Everyone sees it on Home; you see who read it</small></div></button>
     <button class="item" data-adm="event"><div class="ic b">＋</div><div class="tx"><b data-i18n="adm1">Post an event</b><small data-i18n="adm1s">Training, mastermind, mixer</small></div></button>
@@ -365,7 +367,7 @@ try { const s=JSON.parse(localStorage.getItem(LS_KEY)||'null'); if (s && s.lang)
 function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({lang:state.lang})); }catch(e){} }
 
 // In-memory cache, refreshed from the database
-const db = { me:null, members:[], rooms:[], events:[], rsvps:[], bookings:[], spotlights:[], channels:[], msgs:{}, lastSeen:{}, resources:[], checkins:[], partners:[], anns:[], annReads:[], obSteps:[], obProg:[], pushSubs:[], invites:[] };
+const db = { me:null, members:[], rooms:[], events:[], rsvps:[], bookings:[], spotlights:[], channels:[], msgs:{}, lastSeen:{}, resources:[], checkins:[], partners:[], anns:[], annReads:[], obSteps:[], obProg:[], pushSubs:[], invites:[], inquiries:[] };
 try { db.lastSeen = JSON.parse(localStorage.getItem('ccl-seen')||'{}'); } catch(e){}
 function markSeen(id){ db.lastSeen[id]=new Date().toISOString(); try{ localStorage.setItem('ccl-seen', JSON.stringify(db.lastSeen)); }catch(e){} }
 
@@ -374,7 +376,7 @@ function dmKey(a,b){ return [a,b].sort().join(':'); }
 
 async function loadAll(){
   const now = new Date(); const from = new Date(now); from.setDate(from.getDate()-1); const to = new Date(now); to.setDate(to.getDate()+35);
-  const [members, rooms, events, rsvps, bookings, spotlights, channels, recent, resources, checkins, partners, anns, annReads, obSteps, obProg, pushSubs, invites] = await Promise.all([
+  const [members, rooms, events, rsvps, bookings, spotlights, channels, recent, resources, checkins, partners, anns, annReads, obSteps, obProg, pushSubs, invites, inquiries] = await Promise.all([
     q(sb.from('members').select('*').eq('active',true).order('full_name'),'members'),
     q(sb.from('rooms').select('*').order('sort'),'rooms'),
     q(sb.from('events').select('*').gte('starts_at', new Date(now.getTime()-90*864e5).toISOString()).order('starts_at'),'events'),
@@ -391,9 +393,10 @@ async function loadAll(){
     sb.from('onboarding_steps').select('*').eq('active',true).order('sort').then(r=>r.data||[]),
     sb.from('onboarding_progress').select('*').then(r=>r.data||[]),
     sb.from('push_subscriptions').select('id').then(r=>r.data||[]),
-    sb.from('event_invites').select('*').then(r=>r.data||[])
+    sb.from('event_invites').select('*').then(r=>r.data||[]),
+    sb.from('inquiries').select('*').order('created_at',{ascending:false}).limit(100).then(r=>r.data||[])
   ]);
-  Object.assign(db,{members,rooms,events,rsvps,bookings,spotlights,channels,resources,checkins,partners,anns,annReads,obSteps,obProg,pushSubs,invites});
+  Object.assign(db,{members,rooms,events,rsvps,bookings,spotlights,channels,resources,checkins,partners,anns,annReads,obSteps,obProg,pushSubs,invites,inquiries});
   if (db.me){ const fresh=members.find(m=>m.id===db.me.id); if (fresh) db.me=Object.assign(db.me,fresh); }
   db.msgs={}; recent.reverse().forEach(m=>{ const k=m.channel_id||m.dm_key; (db.msgs[k]=db.msgs[k]||[]).push(m); });
 }
@@ -432,7 +435,7 @@ function normSpot(s){ return { ...s, who:s.member_name }; }
 const ES = {
   'app':'Culture Center','auth.t1':'Hecho por agentes, para agentes.','auth.t2':'En Louisville.','auth.p':'Eventos, reservas de salas, chat y el directorio de la oficina, en un solo lugar. Escribe tu correo de eXp y te mandamos un código. Sin contraseña.','app':'Culture Center Louisville','home.weyebrow':'eXp Culture Center Louisville','home.wtitle':'Hecho por agentes, para agentes.','home.wtitle2':'En Louisville.','home.wsub':'Reserva una sala, confirma tu asistencia a una capacitación, escríbele a un colega, mira quién acaba de hacer cap.','auth.label':'Correo de eXp','auth.send':'Mándame un código','auth.codelabel':'Código del correo','auth.verify':'Entrar','auth.resend':'Mandar otro código','auth.note':'Solo para miembros del Culture Center. ¿Todavía no estás en la lista? Pídele a Francisco o a Andy que te agreguen.','auth.installb':'Agrégala a tu pantalla de inicio','auth.installp':'Toca Compartir y luego "Agregar a inicio" para que se abra como una app.','auth.demo':'Ver como Brenda (demo)',
   'demo.banner':'Vista previa con datos de ejemplo. Nada de esto se guarda en la oficina todavía.',
-  'home.hi':'Hola,','home.next':'Lo que sigue','home.all':'Todos los eventos','home.open':'salas libres ahora','home.rooms':'Salas hoy','n5':'Resumen semanal por correo','n5s':'Lunes por la mañana: eventos, anuncios y una nota de Francisco','adm6':'Nota semanal','adm6s':'Tu mensaje al inicio del correo del lunes','home.ann':'Anuncios','adm5':'Publicar un anuncio','adm5s':'Todos lo ven en Inicio; tú ves quién lo leyó','home.book':'Reservar','home.unread':'mensajes sin leer','home.spot':'Agente destacado','home.quick':'Acciones rápidas','home.q1':'Reservar una sala','home.q2':'Buscar a un agente',
+  'home.hi':'Hola,','home.next':'Lo que sigue','home.all':'Todos los eventos','home.open':'salas libres ahora','home.rooms':'Salas hoy','home.act':'Actividad reciente','home.actall':'Ver todo','n5':'Resumen semanal por correo','n5s':'Lunes por la mañana: eventos, anuncios y una nota de Francisco','adm6':'Nota semanal','adm7':'Registro de actividad','adm7s':'Incluye consultas del sitio web y lecturas de anuncios','adm6s':'Tu mensaje al inicio del correo del lunes','home.ann':'Anuncios','adm5':'Publicar un anuncio','adm5s':'Todos lo ven en Inicio; tú ves quién lo leyó','home.book':'Reservar','home.unread':'mensajes sin leer','home.spot':'Agente destacado','home.quick':'Acciones rápidas','home.q1':'Reservar una sala','home.q2':'Buscar a un agente',
   'ev.title':'Eventos','ev.new':'+ Nuevo evento','ev.up':'Próximos','ev.mine':'Míos','ev.past':'Pasados','ev.going':'van','ev.rsvp':'Confirmar','ev.goingBtn':'Voy','ev.cancel':'Ya no voy','ev.cal':'Agregar al calendario','ev.empty':'Nada por aquí todavía.',
   'sp.title':'Reserva un espacio','sp.sub':'Elige un espacio para ver su disponibilidad.','sp.mine':'Mis reservas','sp.open':'Libre','sp.busy':'Ocupada','sp.soon':'Muy pronto','sp.book':'Reservar','sp.pick':'Elige un horario','sp.none':'Todavía no tienes reservas.','sp.booked':'Reservado','sp.release':'Cancelar reserva',
   'ch.title':'Chat','ch.new':'+ Nuevo mensaje','ch.channels':'Canales','ch.dm':'Mensajes directos','ch.back':'Chat','ch.send':'Enviar','ch.ph':'Mensaje…',
@@ -445,7 +448,7 @@ const ES = {
 const EN = {};
 document.querySelectorAll('[data-i18n]').forEach(el=>{ EN[el.dataset.i18n]=el.innerHTML; });
 document.querySelectorAll('[data-i18n-ph]').forEach(el=>{ EN[el.dataset.i18nPh]=el.placeholder; });
-Object.assign(EN,{ 'n5':'Weekly digest email','n5s':"Monday morning: events, announcements, and a note from Francisco",'adm6':'Weekly note','adm6s':"Your message at the top of Monday's digest email",'home.ann':'Announcements','adm5':'Post an announcement','adm5s':'Everyone sees it on Home; you see who read it','dir.agents':'Agents','dir.partners':'Partners','pt.new':'Partner','pt.lender':'Lenders','pt.title':'Title','pt.vendor':'Vendors','pt.community':'Community','home.rooms':'Rooms today','home.book':'Book','ev.going':'going','ev.rsvp':'RSVP','ev.goingBtn':'Going','ev.cancel':"Can't make it",'ev.cal':'Add to calendar','ev.empty':'Nothing here yet.','sp.open':'Open','sp.busy':'Booked','sp.soon':'Coming soon','sp.book':'Book','sp.pick':'Pick a time','sp.none':'No bookings yet.','sp.booked':'Booked','sp.release':'Cancel booking','dir.members':'members','dir.call':'Call','dir.text':'Text','dir.email':'Email','dir.dm':'Message','adm.evTitle':'New event','adm.spTitle':'New spotlight','adm.mbTitle':'New member','adm.save':'Post','f.title':'Title','f.when':'Date & time','f.where':'Where','f.lang':'Language','f.desc':'Description','f.who':'Agent','f.what':'Milestone','f.note':'Note','f.name':'Name','f.email':'eXp email','f.saved':'Posted','f.added':'Member added','toast.rsvp':"You're in. See you there.",'toast.unrsvp':'RSVP removed.','toast.booked':'Room booked.','toast.released':'Booking cancelled.','toast.sent':'Sent.','toast.link':'Link sent (demo). Check your email.','toast.demo':'Preview only' });
+Object.assign(EN,{ 'home.act':'Recent activity','home.actall':'See all','n5':'Weekly digest email','n5s':"Monday morning: events, announcements, and a note from Francisco",'adm6':'Weekly note','adm7':'Activity log','adm7s':'Includes website inquiries and announcement reads','adm6s':"Your message at the top of Monday's digest email",'home.ann':'Announcements','adm5':'Post an announcement','adm5s':'Everyone sees it on Home; you see who read it','dir.agents':'Agents','dir.partners':'Partners','pt.new':'Partner','pt.lender':'Lenders','pt.title':'Title','pt.vendor':'Vendors','pt.community':'Community','home.rooms':'Rooms today','home.book':'Book','ev.going':'going','ev.rsvp':'RSVP','ev.goingBtn':'Going','ev.cancel':"Can't make it",'ev.cal':'Add to calendar','ev.empty':'Nothing here yet.','sp.open':'Open','sp.busy':'Booked','sp.soon':'Coming soon','sp.book':'Book','sp.pick':'Pick a time','sp.none':'No bookings yet.','sp.booked':'Booked','sp.release':'Cancel booking','dir.members':'members','dir.call':'Call','dir.text':'Text','dir.email':'Email','dir.dm':'Message','adm.evTitle':'New event','adm.spTitle':'New spotlight','adm.mbTitle':'New member','adm.save':'Post','f.title':'Title','f.when':'Date & time','f.where':'Where','f.lang':'Language','f.desc':'Description','f.who':'Agent','f.what':'Milestone','f.note':'Note','f.name':'Name','f.email':'eXp email','f.saved':'Posted','f.added':'Member added','toast.rsvp':"You're in. See you there.",'toast.unrsvp':'RSVP removed.','toast.booked':'Room booked.','toast.released':'Booking cancelled.','toast.sent':'Sent.','toast.link':'Link sent (demo). Check your email.','toast.demo':'Preview only' });
 function t(k){ return (state.lang==='es' ? ES[k] : EN[k]) ?? EN[k] ?? k; }
 function L(obj, key){ return state.lang==='es' && obj[key+'_es'] ? obj[key+'_es'] : obj[key]; }
 function applyLang(){
@@ -580,6 +583,7 @@ function renderHome(){
   $('#h-rooms').innerHTML = roomsTodayHTML();
   renderAnnouncements();
   renderOnboarding();
+  renderHomeActivity();
   $('#h-unread').textContent=store.channels().reduce((n,c)=>n+store.unread(c.id),0)+store.dms().reduce((n,d)=>n+store.unread(d.id),0);
   const sp=store.spotlights().map(normSpot);
   $('#h-spot').innerHTML = sp.map((s,i)=> i===0
@@ -861,6 +865,31 @@ $$('#dir-seg button').forEach(b=>b.addEventListener('click',()=>{ $$('#dir-seg b
 $$('#pt-seg button').forEach(b=>b.addEventListener('click',()=>{ $$('#pt-seg button').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); ptCat=b.dataset.c; renderDirectory(); }));
 $('#pt-new').addEventListener('click',()=>partnerForm());
 $('#adm-ann').addEventListener('click',()=>announcementForm());
+function renderHomeActivity(){ const el=$('#h-act'); if(!el) return; const es=state.lang==='es'; const ICON={booking:'⌂',rsvp:'▦',checkin:'✓',member:'☺',inquiry:'✉',read:'📣'}; const now=Date.now();
+  const ago=t=>{ const m=Math.round((now-new Date(t))/60000); if(m<1) return es?'ahora':'now'; if(m<60) return m+' min'; const h=Math.round(m/60); if(h<24) return h+' h'; return Math.round(h/24)+' d'; };
+  const list=activityItems().filter(i=>i.k!=='read'&&i.k!=='inquiry').slice(0,4);
+  el.innerHTML=list.map(i=>`<div class="item" style="padding:10px 12px"><div class="ic ${({booking:'a',rsvp:'b',checkin:'g',member:'v'})[i.k]}" style="width:34px;height:34px;font-size:14px">${ICON[i.k]}</div><div class="tx"><b style="font-size:14px">${esc(i.who)}</b><small>${esc(i.what)}</small></div><span class="r" style="font-size:11px;color:var(--muted);white-space:nowrap">${ago(i.t)}</span></div>`).join('')||`<div class="card" style="color:var(--muted);font-size:14px">${es?'Todavía no hay actividad.':'No activity yet.'}</div>`; }
+function activityItems(){
+  const nm=id=>(store.members().find(m=>m.id===id)||{}).full_name||'—'; const rn=id=>{ const r=store.rooms().find(x=>x.id===id); return r?L(r,'name'):id; };
+  const es=state.lang==='es'; const items=[];
+  store.bookings().forEach(b=>{ if(b.event_id) return; items.push({t:b.created_at||b.starts_at,k:'booking',who:nm(b.member_id),what:`${es?'Reservó':'Booked'} ${rn(b.room_id)} · ${fmtDay(b.starts_at)} ${fmtTime(b.starts_at)}–${fmtTime(b.ends_at)}${b.note?' · '+b.note:''}`}); });
+  db.rsvps.forEach(r=>{ const e=store.event(r.event_id); if(!e||!r.created_at) return; items.push({t:r.created_at,k:'rsvp',who:nm(r.member_id),what:`RSVP · ${L(e,'title')} · ${fmtDay(e.starts_at)}`}); });
+  db.checkins.forEach(c=>{ const e=store.event(c.event_id); if(!e) return; items.push({t:c.checked_at,k:'checkin',who:nm(c.member_id),what:`${es?'Check-in en':'Checked in to'} ${L(e,'title')}`}); });
+  store.members().forEach(m=>items.push({t:m.created_at,k:'member',who:m.full_name,what:es?'Se agregó como miembro':'Added as a member'}));
+  if(isAdmin()) db.inquiries.forEach(i=>items.push({t:i.created_at,k:'inquiry',who:i.name,what:`${es?'Consulta del sitio web':'Website inquiry'} · ${({agent:'eXp agent',considering:es?'Agente considerando eXp':'Agent considering eXp',partner:es?'Aliado':'Partner',other:es?'Otro':'Other'})[i.role]||i.role}`}));
+  if(isAdmin()) db.annReads.forEach(r=>{ const a=db.anns.find(x=>x.id===r.announcement_id); if(!a||!r.read_at) return; items.push({t:r.read_at,k:'read',who:nm(r.member_id),what:`${es?'Leyó':'Read'} “${L(a,'title')}”`}); });
+  return items.filter(i=>i.t&&!isNaN(new Date(i.t))).sort((a,b)=>new Date(b.t)-new Date(a.t));
+}
+function activityBadge(){ const b=$('#adm-act-n'); if(!b) return; const last=+(localStorage.getItem('ccl-act-seen')||0); const n=activityItems().filter(i=>new Date(i.t).getTime()>last && i.k!=='read').length; b.textContent=n; b.hidden=!n; }
+function openActivity(){ const es=state.lang==='es'; const ICON={booking:'⌂',rsvp:'▦',checkin:'✓',member:'☺',inquiry:'✉',read:'📣'}; const now=Date.now();
+  const ago=t=>{ const m=Math.round((now-new Date(t))/60000); if(m<1) return es?'ahora':'just now'; if(m<60) return m+' min'; const h=Math.round(m/60); if(h<24) return h+' h'; const d=Math.round(h/24); return d+(es?' d':' d'); };
+  let filter=''; const draw=()=>{ const list=activityItems().filter(i=>!filter||i.k===filter).slice(0,150);
+    openSheet(`<h2>${es?'Registro de actividad':'Activity log'}</h2><div class="seg" style="overflow-x:auto;flex-wrap:nowrap;margin:10px 0">${[['',es?'Todo':'All'],['booking',es?'Reservas':'Bookings'],['rsvp','RSVPs'],['checkin','Check-ins'],['member',es?'Miembros':'Members'],...(isAdmin()?[['inquiry',es?'Consultas':'Inquiries']]:[])].map(([k,l])=>`<button data-af="${k}" aria-pressed="${filter===k}">${l}</button>`).join('')}</div>
+      ${list.map(i=>`<div class="item" style="margin-top:8px"><div class="ic ${({booking:'a',rsvp:'b',checkin:'g',member:'v',inquiry:'c',read:'b'})[i.k]}">${ICON[i.k]}</div><div class="tx"><b>${esc(i.who)}</b><small>${esc(i.what)}</small></div><span class="r" style="font-size:11px;color:var(--muted);white-space:nowrap">${ago(i.t)}</span></div>`).join('')||`<div class="empty">${es?'Nada todavía.':'Nothing yet.'}</div>`}`);
+    $$('[data-af]').forEach(b=>b.onclick=()=>{ filter=b.dataset.af; draw(); }); };
+  draw(); localStorage.setItem('ccl-act-seen',String(now)); activityBadge(); }
+$('#adm-act').addEventListener('click',openActivity);
+document.addEventListener('click',e=>{ if(e.target.closest('#h-act-all')) openActivity(); });
 $('#adm-note').addEventListener('click', async()=>{ const es=state.lang==='es'; const { data } = await sb.from('app_settings').select('value').eq('key','weekly_note').maybeSingle(); const v=(data&&data.value)||{};
   openSheet(`<h2>${es?'Nota semanal':'Weekly note'}</h2><p class="meta">${es?'Va arriba del correo del lunes. Usa {first_name} para el nombre de cada agente.':'Goes at the top of Monday\'s email. Use {first_name} for each agent\'s name.'}</p>
     <div class="field" style="margin-top:12px"><label>${es?'Asunto (opcional)':'Subject (optional)'}</label><input id="wn-subj" value="${esc(v.subject||'')}" placeholder="This week at the Center"></div>
@@ -976,7 +1005,7 @@ function renderMore(){
   const me=meN(); $('#m-name').textContent=me.name; $('#m-av').innerHTML = db.me.avatar_url ? `<img src="${esc(db.me.avatar_url)}" alt="">` : me.initials; $('#m-email').textContent=me.email;
   $('#m-chips').innerHTML=`<span>${db.checkins.filter(c=>c.member_id===db.me.id).length} ${state.lang==='es'?'eventos asistidos':'events attended'}</span>`+(me.langs||[]).map(l=>`<span>${l==='es'?'Español':'English'}</span>`).join('')+(me.spec||[]).map(s=>`<span>${esc(s)}</span>`).join('')+`<span style="color:var(--blue);cursor:pointer" id="edit-me">${state.lang==='es'?'Editar perfil':'Edit profile'}</span>`;
   $('#edit-me').onclick=()=>adminForm('member', me, true);
-  $('#admin-sec').hidden=!isAdmin();
+  $('#admin-sec').hidden=!isAdmin(); activityBadge();
   const prefs=db.me.prefs||{};
   $$('.sw').forEach(s=>s.setAttribute('aria-checked', String(s.dataset.n==='digest' ? prefs.digest!==false : !!prefs[s.dataset.n])));
   const ps=$('#push-state'); if (ps){ const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
