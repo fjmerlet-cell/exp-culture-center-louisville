@@ -70,6 +70,7 @@ td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}td.nw{
     <div class="brand"><img src="../img/exp-logo-white.png" alt=""><div><b>Culture Center</b>Admin dashboard</div></div>
     <nav>
       <button data-p="overview" aria-current="true"><i>◫</i>Overview</button>
+      <button data-p="activity"><i>◷</i>Activity</button>
       <button data-p="inquiries"><i>✉</i>Inquiries <span class="pill busy" id="inq-badge" style="margin-left:auto;display:none"></span></button>
       <button data-p="members"><i>☺</i>Members</button>
       <button data-p="events"><i>▦</i>Events</button>
@@ -92,7 +93,14 @@ td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}td.nw{
         <div class="card"><h3>Announcements <span>read rate</span></h3><div id="ch-ann"></div></div>
         <div class="card"><h3>Members joined <span>last 6 months</span></h3><div id="ch-join"></div></div>
       </div>
-      <div class="card" style="margin-top:14px"><h3>Needs attention</h3><div id="attn"></div></div>
+      <div class="grid g2" style="margin-top:14px"><div class="card"><h3>Needs attention</h3><div id="attn"></div></div><div class="card"><h3>Latest activity <span><button class="btn sm" onclick="goPage('activity')">See all</button></span></h3><div id="ov-act"></div></div></div>
+    </section>
+
+    <!-- ACTIVITY -->
+    <section class="page" id="p-activity">
+      <div class="top"><div><h1>Activity</h1><p>Everything members have done, newest first.</p></div><button class="btn" id="act-refresh">↻ Refresh</button></div>
+      <div class="tools"><div class="seg" id="act-seg"><button aria-pressed="true" data-f="">All</button><button data-f="booking">Bookings</button><button data-f="rsvp">RSVPs</button><button data-f="checkin">Check-ins</button><button data-f="member">Members</button><button data-f="inquiry">Inquiries</button><button data-f="read">Reads</button></div></div>
+      <div class="card tbl"><table><thead><tr><th style="width:150px">When</th><th style="width:180px">Who</th><th>What</th></tr></thead><tbody id="act-list"></tbody></table></div>
     </section>
 
     <!-- INQUIRIES -->
@@ -232,7 +240,7 @@ function goPage(p){ const b=$(`nav [data-p="${p}"]`); if(b) b.click(); }
 window.addEventListener('load',()=>{ const h=location.hash.replace('#',''); if(h) setTimeout(()=>goPage(h),50); });
 $$('nav button').forEach(b=>b.onclick=()=>{ $$('nav button').forEach(x=>x.setAttribute('aria-current','false')); b.setAttribute('aria-current','true'); $$('.page').forEach(p=>p.classList.remove('active')); $('#p-'+b.dataset.p).classList.add('active'); });
 $('#refresh').onclick=async()=>{ await loadAll(); renderAll(); toast('Refreshed'); };
-function renderAll(){ renderInquiries(); renderOverview(); renderMembers(); renderEvents(); renderRooms(); renderAnns(); renderPartners(); renderResources(); renderSettings(); }
+function renderAll(){ renderActivity(); renderInquiries(); renderOverview(); renderMembers(); renderEvents(); renderRooms(); renderAnns(); renderPartners(); renderResources(); renderSettings(); }
 function bars(rows, color){ const max=Math.max(1,...rows.map(r=>r.v)); return rows.length?rows.map(r=>`<div class="bar"><span class="lbl" title="${esc(r.l)}">${esc(r.l)}</span><span class="tr"><i style="width:${(r.v/max*100).toFixed(1)}%;background:${r.c||color||'var(--blue)'}"></i></span><span class="v">${esc(r.t??r.v)}</span></div>`).join(''):'<div class="empty">Nothing yet.</div>'; }
 
 /* ---------- overview ---------- */
@@ -262,8 +270,27 @@ function renderOverview(){
   const unreadPinned=db.anns.filter(a=>a.pinned).map(a=>({a,n:active().length-db.annReads.filter(r=>r.announcement_id===a.id).length})).filter(x=>x.n>0); unreadPinned.forEach(x=>attn.push(`"${x.a.title}" — ${x.n} member(s) haven't read it.`));
   const noShow=active().filter(m=>!db.checkins.some(c=>c.member_id===m.id)&&new Date(m.created_at)<new Date(now.getTime()-30*864e5)); if(noShow.length) attn.push(`${noShow.length} member(s) joined 30+ days ago and haven't checked in to any event yet.`);
   const emptyWeek=upcoming.filter(e=>new Date(e.starts_at)<new Date(now.getTime()+7*864e5)).length===0; if(emptyWeek) attn.push('No events on the calendar for the next 7 days.');
+  { const rows=[...$('#act-list').querySelectorAll('tr.row')].slice(0,8); $('#ov-act').innerHTML=rows.length?rows.map(r=>`<div class="bar" style="margin:8px 0;font-size:13px;gap:8px"><span style="color:var(--dim);width:80px;flex:none">${r.children[0].firstChild.textContent}</span><span style="flex:1"><b>${r.children[1].textContent}</b> · ${r.children[2].innerHTML}</span></div>`).join(''):'<div class="empty">Nothing yet.</div>'; }
   $('#attn').innerHTML=attn.length?'<ul style="margin:0;padding-left:18px;color:var(--muted)">'+attn.map(a=>`<li style="margin:4px 0">${esc(a)}</li>`).join('')+'</ul>':'<div class="empty">All clear.</div>';
 }
+
+/* ---------- activity ---------- */
+let actF='';
+function renderActivity(){
+  const items=[];
+  db.bookings.forEach(b=>{ if(b.event_id) return; items.push({t:b.created_at||b.starts_at,k:'booking',who:memberName(b.member_id),what:`Booked <b>${esc(roomName(b.room_id))}</b> · ${fmtDT(b.starts_at)}–${fmtT(b.ends_at)}${b.note?' · '+esc(b.note):''}`}); });
+  db.rsvps.forEach(r=>{ const e=db.events.find(x=>x.id===r.event_id); if(!e||!r.created_at) return; items.push({t:r.created_at,k:'rsvp',who:memberName(r.member_id),what:`RSVP'd to <b>${esc(e.title)}</b> · ${fmtD(e.starts_at)}`}); });
+  db.checkins.forEach(c=>{ const e=db.events.find(x=>x.id===c.event_id); if(!e) return; items.push({t:c.checked_at,k:'checkin',who:memberName(c.member_id),what:`Checked in to <b>${esc(e.title)}</b>${c.by_admin?' <span class="pill">by admin</span>':''}`}); });
+  db.members.forEach(m=>items.push({t:m.created_at,k:'member',who:m.full_name,what:`Added as a member${m.role==='admin'?' (admin)':''}`}));
+  db.inquiries.forEach(i=>items.push({t:i.created_at,k:'inquiry',who:i.name,what:`Website inquiry · ${INQ_ROLE[i.role]||i.role}${i.message?' · '+esc(i.message.slice(0,80)):''}`}));
+  db.annReads.forEach(r=>{ const a=db.anns.find(x=>x.id===r.announcement_id); if(!a||!r.read_at) return; items.push({t:r.read_at,k:'read',who:memberName(r.member_id),what:`Read <b>${esc(a.title)}</b>`}); });
+  const list=items.filter(i=>!actF||i.k===actF).sort((a,b)=>new Date(b.t)-new Date(a.t)).slice(0,300);
+  const now=Date.now(); const ago=t=>{ const m=Math.round((now-new Date(t))/60000); if(m<1) return 'just now'; if(m<60) return m+' min ago'; const h=Math.round(m/60); if(h<24) return h+' h ago'; const d=Math.round(h/24); return d===1?'yesterday':d+' days ago'; };
+  const ICON={booking:'⌂',rsvp:'▦',checkin:'✓',member:'☺',inquiry:'✉',read:'📣'};
+  $('#act-list').innerHTML=list.map(i=>`<tr class="row"><td class="nw" title="${new Date(i.t).toLocaleString()}">${ago(i.t)}<span class="sub">${fmtDT(i.t)}</span></td><td class="nw"><b>${esc(i.who)}</b></td><td>${ICON[i.k]||''} ${i.what}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">Nothing yet.</td></tr>';
+}
+$$('#act-seg button').forEach(b=>b.onclick=()=>{ $$('#act-seg button').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); actF=b.dataset.f; renderActivity(); });
+$('#act-refresh').onclick=async()=>{ await loadAll(); renderAll(); toast('Refreshed'); };
 
 /* ---------- inquiries ---------- */
 let inqF='new'; const INQ_ROLE={agent:'eXp agent in Louisville',considering:'Agent considering eXp',partner:'Lender / title / vendor',other:'Something else'};
