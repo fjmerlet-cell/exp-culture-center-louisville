@@ -1116,7 +1116,14 @@ showAuth();
 window.addEventListener('hashchange',()=>{ const h=location.hash.replace('#',''); if(db.me && ['home','events','spaces','chat','resources','directory','more'].includes(h)) show(h); });
 const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
 if (!standalone && /iphone|ipad/i.test(navigator.userAgent)) $('#install-tip').style.display='block';
+const APP_BUILD = 'v28';
 if ('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
+// When the app comes back to the foreground, check for a newer build and reload once so updates land without a force-quit.
+(function(){ let checking=false, last=0;
+  async function check(){ if(checking || Date.now()-last<60000 || location.protocol!=='https:') return; checking=true; last=Date.now();
+    try{ const txt=await fetch('sw.js?ts='+Date.now(),{cache:'no-store'}).then(r=>r.text()); const m=txt.match(/ccl-app-(v\d+)/); if(m && m[1]!==APP_BUILD && !document.querySelector('.sheet.open')) location.reload(); }catch(e){} checking=false; }
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') check(); });
+  window.addEventListener('focus',check); setTimeout(check,4000); })();
 </script>
 </body>
 </html>

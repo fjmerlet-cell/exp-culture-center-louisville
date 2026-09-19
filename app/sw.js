@@ -1,5 +1,5 @@
 // Culture Center app — minimal service worker: cache the shell so the app opens offline.
-const CACHE = 'ccl-app-v27';
+const CACHE = 'ccl-app-v28';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
@@ -13,7 +13,7 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return; // never cache API calls or third parties
   e.respondWith(
-    fetch(e.request).then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); return res; })
+    fetch(e.request, /\.(html|js|webmanifest)$|\/app\/?$/.test(url.pathname) ? { cache: 'no-store' } : undefined).then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); return res; })
       .catch(() => caches.match(e.request).then((r) => r || caches.match('./index.html')))
   );
 });
