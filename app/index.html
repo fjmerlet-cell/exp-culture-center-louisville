@@ -126,6 +126,7 @@ input,select,textarea{font:inherit}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:31;max-width:520px;margin:0 auto;background:var(--surface);border:1px solid var(--line2);border-bottom:0;border-radius:22px 22px 0 0;padding:12px 16px calc(var(--sab) + 20px);max-height:88vh;overflow:auto;transform:translateY(105%);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
 .sheet.open{transform:none}
 .sheet .grab{width:40px;height:4px;border-radius:2px;background:var(--line2);margin:0 auto 14px}
+.sheet .sheet-x{position:sticky;top:0;float:right;margin:-6px -4px 0 0;width:34px;height:34px;border-radius:50%;background:var(--surface2);border:1px solid var(--line2);color:var(--muted);font-size:14px;z-index:2}
 .sheet h2{font-size:20px}
 .sheet .meta{color:var(--muted);font-size:13px;margin-top:6px}
 .sheet .body{margin-top:14px;font-size:14px;color:#C9D2E0}
@@ -346,7 +347,7 @@ input,select,textarea{font:inherit}
 </div></nav>
 
 <div class="sheet-bg" id="sheet-bg"></div>
-<div class="sheet" id="sheet" role="dialog" aria-modal="true"><div class="grab"></div><div id="sheet-body"></div></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true"><div class="grab"></div><button class="sheet-x" id="sheet-close" aria-label="Close">✕</button><div id="sheet-body"></div></div>
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -471,7 +472,10 @@ function fmtTime(iso){ return new Date(iso).toLocaleTimeString(loc(),{hour:'nume
 function dow(iso){ return new Date(iso).toLocaleDateString(loc(),{weekday:'short'}).toUpperCase(); }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 let toastT; function toast(msg){ const el=$('#toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'),2200); }
-function openSheet(html){ $('#sheet-body').innerHTML=html; $('#sheet').classList.add('open'); $('#sheet-bg').classList.add('open'); }
+function openSheet(html){ $('#sheet-body').innerHTML=html; $('#sheet').classList.add('open'); $('#sheet-bg').classList.add('open'); $('#sheet').scrollTop=0; }
+$('#sheet-close').addEventListener('click', closeSheet);
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeSheet(); });
+(function(){ let y0=null; const sh=$('#sheet'); sh.addEventListener('touchstart',e=>{ y0 = sh.scrollTop<=0 ? e.touches[0].clientY : null; },{passive:true}); sh.addEventListener('touchmove',e=>{ if(y0!==null && e.touches[0].clientY-y0>90 && sh.scrollTop<=0){ y0=null; closeSheet(); } },{passive:true}); })();
 function closeSheet(){ $('#sheet').classList.remove('open'); $('#sheet-bg').classList.remove('open'); }
 $('#sheet-bg').addEventListener('click', closeSheet);
 function initials(n){ return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
