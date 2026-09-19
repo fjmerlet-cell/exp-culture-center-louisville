@@ -42,6 +42,9 @@ input,select,textarea{font:inherit}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
 .top h1{font-size:24px}
 .top .sub{color:var(--muted);font-size:13px;margin-top:2px}
+.bell{position:relative;width:36px;height:36px;border-radius:50%;background:var(--surface);border:1px solid var(--line2);display:grid;place-items:center;color:var(--muted)}
+.bell svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.bell .n{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--coral);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;border:2px solid var(--bg)}
 .avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--violet));display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:13px;flex:none;color:#fff}
 .avatar.lg{width:64px;height:64px;font-size:22px}
 .avatar.sm{width:28px;height:28px;font-size:11px}
@@ -231,7 +234,7 @@ input,select,textarea{font:inherit}
 
 <!-- ===== HOME ===== -->
 <section class="screen" id="s-home">
-  <div class="top"><div><h1><span data-i18n="home.hi">Welcome,</span> <span id="h-name">Brenda</span></h1><p class="sub" id="h-date"></p></div><div class="avatar" id="h-av">B</div></div>
+  <div class="top"><div><h1><span data-i18n="home.hi">Welcome,</span> <span id="h-name">Brenda</span></h1><p class="sub" id="h-date"></p></div><div style="display:flex;align-items:center;gap:10px"><button class="bell" id="h-bell" aria-label="Activity"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="n" id="h-bell-n" hidden></span></button><div class="avatar" id="h-av">B</div></div></div>
     <div class="welcome" id="h-welcome">
     <img src="img/welcome.jpg" alt="">
     <div class="orbs" aria-hidden="true"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
@@ -247,7 +250,6 @@ input,select,textarea{font:inherit}
     <button class="stat" data-go="chat"><b id="h-unread">15</b><span data-i18n="home.unread">unread messages</span></button>
   </div>
   <div class="sec"><div class="sec-h"><h2 data-i18n="home.rooms">Rooms today</h2><button class="lnk" data-go="spaces" data-i18n="home.book">Book</button></div><div id="h-rooms"></div></div>
-  <div class="sec"><div class="sec-h"><h2 data-i18n="home.act">Recent activity</h2><button class="lnk" id="h-act-all" data-i18n="home.actall">See all</button></div><div id="h-act"></div></div>
   <div class="sec"><div class="sec-h"><h2 data-i18n="home.spot">Member spotlight</h2></div><div id="h-spot"></div></div>
   <div class="sec"><div class="sec-h"><h2 data-i18n="home.quick">Quick actions</h2></div>
     <div class="grid2">
@@ -583,7 +585,7 @@ function renderHome(){
   $('#h-rooms').innerHTML = roomsTodayHTML();
   renderAnnouncements();
   renderOnboarding();
-  renderHomeActivity();
+  activityBadge();
   $('#h-unread').textContent=store.channels().reduce((n,c)=>n+store.unread(c.id),0)+store.dms().reduce((n,d)=>n+store.unread(d.id),0);
   const sp=store.spotlights().map(normSpot);
   $('#h-spot').innerHTML = sp.map((s,i)=> i===0
@@ -880,7 +882,7 @@ function activityItems(){
   if(isAdmin()) db.annReads.forEach(r=>{ const a=db.anns.find(x=>x.id===r.announcement_id); if(!a||!r.read_at) return; items.push({t:r.read_at,k:'read',who:nm(r.member_id),what:`${es?'Leyó':'Read'} “${L(a,'title')}”`}); });
   return items.filter(i=>i.t&&!isNaN(new Date(i.t))).sort((a,b)=>new Date(b.t)-new Date(a.t));
 }
-function activityBadge(){ const b=$('#adm-act-n'); if(!b) return; const last=+(localStorage.getItem('ccl-act-seen')||0); const n=activityItems().filter(i=>new Date(i.t).getTime()>last && i.k!=='read').length; b.textContent=n; b.hidden=!n; }
+function activityBadge(){ const last=+(localStorage.getItem('ccl-act-seen')||0); const n=activityItems().filter(i=>new Date(i.t).getTime()>last && i.k!=='read' && i.who!==db.me.full_name).length; [$('#adm-act-n'),$('#h-bell-n')].forEach(b=>{ if(!b) return; b.textContent=n>99?'99+':n; b.hidden=!n; }); }
 function openActivity(){ const es=state.lang==='es'; const ICON={booking:'⌂',rsvp:'▦',checkin:'✓',member:'☺',inquiry:'✉',read:'📣'}; const now=Date.now();
   const ago=t=>{ const m=Math.round((now-new Date(t))/60000); if(m<1) return es?'ahora':'just now'; if(m<60) return m+' min'; const h=Math.round(m/60); if(h<24) return h+' h'; const d=Math.round(h/24); return d+(es?' d':' d'); };
   let filter=''; const draw=()=>{ const list=activityItems().filter(i=>!filter||i.k===filter).slice(0,150);
@@ -889,7 +891,7 @@ function openActivity(){ const es=state.lang==='es'; const ICON={booking:'⌂',r
     $$('[data-af]').forEach(b=>b.onclick=()=>{ filter=b.dataset.af; draw(); }); };
   draw(); localStorage.setItem('ccl-act-seen',String(now)); activityBadge(); }
 $('#adm-act').addEventListener('click',openActivity);
-document.addEventListener('click',e=>{ if(e.target.closest('#h-act-all')) openActivity(); });
+$('#h-bell').addEventListener('click',openActivity);
 $('#adm-note').addEventListener('click', async()=>{ const es=state.lang==='es'; const { data } = await sb.from('app_settings').select('value').eq('key','weekly_note').maybeSingle(); const v=(data&&data.value)||{};
   openSheet(`<h2>${es?'Nota semanal':'Weekly note'}</h2><p class="meta">${es?'Va arriba del correo del lunes. Usa {first_name} para el nombre de cada agente.':'Goes at the top of Monday\'s email. Use {first_name} for each agent\'s name.'}</p>
     <div class="field" style="margin-top:12px"><label>${es?'Asunto (opcional)':'Subject (optional)'}</label><input id="wn-subj" value="${esc(v.subject||'')}" placeholder="This week at the Center"></div>
