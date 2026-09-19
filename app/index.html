@@ -364,7 +364,7 @@ try { const s=JSON.parse(localStorage.getItem(LS_KEY)||'null'); if (s && s.lang)
 function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({lang:state.lang})); }catch(e){} }
 
 // In-memory cache, refreshed from the database
-const db = { me:null, members:[], rooms:[], events:[], rsvps:[], bookings:[], spotlights:[], channels:[], msgs:{}, lastSeen:{}, resources:[], checkins:[], partners:[], anns:[], annReads:[], obSteps:[], obProg:[], pushSubs:[] };
+const db = { me:null, members:[], rooms:[], events:[], rsvps:[], bookings:[], spotlights:[], channels:[], msgs:{}, lastSeen:{}, resources:[], checkins:[], partners:[], anns:[], annReads:[], obSteps:[], obProg:[], pushSubs:[], invites:[] };
 try { db.lastSeen = JSON.parse(localStorage.getItem('ccl-seen')||'{}'); } catch(e){}
 function markSeen(id){ db.lastSeen[id]=new Date().toISOString(); try{ localStorage.setItem('ccl-seen', JSON.stringify(db.lastSeen)); }catch(e){} }
 
@@ -373,7 +373,7 @@ function dmKey(a,b){ return [a,b].sort().join(':'); }
 
 async function loadAll(){
   const now = new Date(); const from = new Date(now); from.setDate(from.getDate()-1); const to = new Date(now); to.setDate(to.getDate()+35);
-  const [members, rooms, events, rsvps, bookings, spotlights, channels, recent, resources, checkins, partners, anns, annReads, obSteps, obProg, pushSubs] = await Promise.all([
+  const [members, rooms, events, rsvps, bookings, spotlights, channels, recent, resources, checkins, partners, anns, annReads, obSteps, obProg, pushSubs, invites] = await Promise.all([
     q(sb.from('members').select('*').eq('active',true).order('full_name'),'members'),
     q(sb.from('rooms').select('*').order('sort'),'rooms'),
     q(sb.from('events').select('*').gte('starts_at', new Date(now.getTime()-90*864e5).toISOString()).order('starts_at'),'events'),
@@ -389,9 +389,10 @@ async function loadAll(){
     sb.from('announcement_reads').select('*').then(r=>r.data||[]),
     sb.from('onboarding_steps').select('*').eq('active',true).order('sort').then(r=>r.data||[]),
     sb.from('onboarding_progress').select('*').then(r=>r.data||[]),
-    sb.from('push_subscriptions').select('id').then(r=>r.data||[])
+    sb.from('push_subscriptions').select('id').then(r=>r.data||[]),
+    sb.from('event_invites').select('*').then(r=>r.data||[])
   ]);
-  Object.assign(db,{members,rooms,events,rsvps,bookings,spotlights,channels,resources,checkins,partners,anns,annReads,obSteps,obProg,pushSubs});
+  Object.assign(db,{members,rooms,events,rsvps,bookings,spotlights,channels,resources,checkins,partners,anns,annReads,obSteps,obProg,pushSubs,invites});
   if (db.me){ const fresh=members.find(m=>m.id===db.me.id); if (fresh) db.me=Object.assign(db.me,fresh); }
   db.msgs={}; recent.reverse().forEach(m=>{ const k=m.channel_id||m.dm_key; (db.msgs[k]=db.msgs[k]||[]).push(m); });
 }
@@ -584,7 +585,7 @@ function renderHome(){
 
 function eventRow(e){
   const mine=store.mine(e.id);
-  return `<button class="item" data-ev="${e.id}"><div class="ic b">${dow(e.when)}</div><div class="tx"><b>${esc(L(e,'title'))}</b><small>${fmtDay(e.when)} · ${fmtTime(e.when)} · ${esc(e.where)} · ${e.lang||''}${e.series_rule?' · ↻ '+seriesLabel(e):''}</small></div><span class="r"><span class="pill ${store.checkedIn(e.id)?'on':(mine?'on':'')}">${store.checkedIn(e.id)?'✓ '+(state.lang==='es'?'Asististe':'Attended'):(new Date(e.when)<new Date()&&isAdmin()?store.attendance(e.id).length+' '+(state.lang==='es'?'asistieron':'attended'):(mine?t('ev.goingBtn'):e.going+' '+t('ev.going')))}</span></span></button>`;
+  return `<button class="item" data-ev="${e.id}"><div class="ic b">${dow(e.when)}</div><div class="tx"><b>${esc(L(e,'title'))}</b><small>${fmtDay(e.when)} · ${fmtTime(e.when)} · ${esc(e.where)} · ${e.lang||''}${e.series_rule?' · ↻ '+seriesLabel(e):''}${e.invite_only?' · 🔒 '+(state.lang==='es'?'Solo con invitación':'Invite only'):''}</small></div><span class="r"><span class="pill ${store.checkedIn(e.id)?'on':(mine?'on':'')}">${store.checkedIn(e.id)?'✓ '+(state.lang==='es'?'Asististe':'Attended'):(new Date(e.when)<new Date()&&isAdmin()?store.attendance(e.id).length+' '+(state.lang==='es'?'asistieron':'attended'):(mine?t('ev.goingBtn'):e.going+' '+t('ev.going')))}</span></span></button>`;
 }
 let evFilter='upcoming';
 function renderEvents(){
@@ -601,13 +602,16 @@ document.addEventListener('click', e=>{
   const b=e.target.closest('[data-ev]'); if(!b) return;
   const ev=normEvent(store.event(b.dataset.ev)); const mine=store.mine(ev.id);
   openSheet(`<span class="eyebrow coral">${esc(L(ev,'kind')||'')} · ${ev.lang||''}</span><h2 style="margin-top:8px">${esc(L(ev,'title'))}</h2>
-    <p class="meta">${fmtDay(ev.when)} · ${fmtTime(ev.when)} · ${ev.dur} min · ${esc(ev.where)}${ev.series_rule?` · <span style="color:var(--amber)">↻ ${seriesLabel(ev)}</span>`:''}</p>
+    <p class="meta">${fmtDay(ev.when)} · ${fmtTime(ev.when)} · ${ev.dur} min · ${esc(ev.where)}${ev.series_rule?` · <span style="color:var(--amber)">↻ ${seriesLabel(ev)}</span>`:''}${ev.invite_only?` · <span style="color:var(--amber)">🔒 ${state.lang==='es'?'Solo con invitación':'Invite only'}</span>`:''}</p>
+    ${ev.invite_only&&!isAdmin()?`<p class="note" style="margin-top:6px">${state.lang==='es'?'Estás en la lista de invitados de esta sesión.':'You are on the invite list for this session.'}</p>`:''}
     <p class="body">${esc(L(ev,'desc'))}</p>
     <p class="meta" style="margin-top:12px">${ev.going} ${t('ev.going')}${store.attendance(ev.id).length?` · ${store.attendance(ev.id).length} ${state.lang==='es'?'asistieron':'checked in'}`:''}</p>
     ${store.checkedIn(ev.id)?`<div class="card" style="margin-top:12px;border-color:var(--green);color:var(--green);font-weight:600">✓ ${state.lang==='es'?'Ya hiciste check-in':'You\'re checked in'}</div>`
       : checkinWindow(ev)?`<div class="card" style="margin-top:12px"><b style="font-family:var(--display)">${state.lang==='es'?'Check-in':'Check in'}</b><p class="meta" style="margin-top:4px">${state.lang==='es'?'Escribe el código de 4 dígitos que está en la pantalla o que te da el anfitrión.':'Enter the 4-digit code on the screen or from the host.'}</p><div class="row" style="margin-top:10px"><input id="ci-code" inputmode="numeric" maxlength="4" placeholder="0000" style="text-align:center;font-size:22px;letter-spacing:.3em;font-family:var(--display)"><button class="btn btn-primary" id="ci-go" style="flex:0 0 auto;white-space:nowrap;padding-inline:20px">${state.lang==='es'?'Check-in':'Check in'}</button></div><p class="meta" id="ci-msg" style="margin-top:6px"></p></div>`:''}
     <div class="actions"><button class="btn ${mine?'btn-ghost':'btn-primary'}" id="rsvp">${mine?t('ev.cancel'):t('ev.rsvp')}</button></div>
-    ${isAdmin()?`<div class="sec" style="margin-top:18px"><div class="sec-h"><h2>${state.lang==='es'?'Asistencia':'Attendance'}</h2><span id="ci-admin-code" style="font-family:var(--display);color:var(--amber)"></span></div><div id="att-list"></div><p class="note" style="margin-top:8px"><button id="att-csv" style="color:var(--blue);font-weight:600">${state.lang==='es'?'Descargar lista (CSV)':'Download list (CSV)'}</button></p></div>`:''}
+    ${isAdmin()?`<div class="sec" style="margin-top:18px"><div class="sec-h"><h2>${state.lang==='es'?'Acceso':'Access'}</h2><button class="lnk" id="inv-toggle">${ev.invite_only?(state.lang==='es'?'Abrir a todos':'Open to everyone'):(state.lang==='es'?'Hacer solo con invitación':'Make invite only')}</button></div>
+      ${ev.invite_only?`<div id="inv-list"></div><div class="field" style="margin-top:8px"><select id="inv-add"><option value="">${state.lang==='es'?'Invitar a alguien…':'Invite someone…'}</option>${store.members().filter(m=>!db.invites.some(i=>i.event_id===ev.id&&i.member_id===m.id)).map(m=>`<option value="${m.id}">${esc(m.full_name)}</option>`).join('')}</select></div>${ev.series_id?`<p class="note">${state.lang==='es'?'Las invitaciones aplican a todas las fechas de esta serie y confirman su asistencia automáticamente.':'Invites apply to every date in this series and RSVP them automatically.'}</p>`:''}`:`<p class="note">${state.lang==='es'?'Cualquier miembro puede verlo y confirmar.':'Any member can see it and RSVP.'}</p>`}</div>
+    <div class="sec" style="margin-top:18px"><div class="sec-h"><h2>${state.lang==='es'?'Asistencia':'Attendance'}</h2><span id="ci-admin-code" style="font-family:var(--display);color:var(--amber)"></span></div><div id="att-list"></div><p class="note" style="margin-top:8px"><button id="att-csv" style="color:var(--blue);font-weight:600">${state.lang==='es'?'Descargar lista (CSV)':'Download list (CSV)'}</button></p></div>`:''}
     <p class="meta" style="margin-top:14px">${t('ev.cal')}</p><div class="actions" style="margin-top:8px">${calButtons({title:ev.title,start:ev.when,end:new Date(new Date(ev.when).getTime()+ev.dur*60000),location:ev.where,desc:ev.desc,uid:ev.id})}</div>
     ${isAdmin()?`<p class="note" style="text-align:center"><button id="ev-del" style="color:var(--red);font-weight:600">${ev.series_id?(state.lang==='es'?'Eliminar solo este':'Delete this one'):(state.lang==='es'?'Eliminar evento':'Delete event')}</button>${ev.series_id?` &nbsp;·&nbsp; <button id="ev-del-series" style="color:var(--red);font-weight:600">${state.lang==='es'?'Eliminar este y los siguientes':'Delete this and all future'}</button>`:''}</p>`:''}`);
   $('#rsvp').onclick=async()=>{
@@ -620,7 +624,13 @@ document.addEventListener('click', e=>{
     if (error){ $('#ci-msg').textContent=error.message; return; }
     if (data!=='ok'){ $('#ci-msg').textContent=msgs[data]||data; return; }
     db.checkins=await sb.from('checkins').select('*').then(r=>r.data||[]); closeSheet(); renderAll(); toast(state.lang==='es'?'¡Listo! Check-in hecho.':'Checked in. Welcome!'); };
-  if (isAdmin()) renderAttendance(ev);
+  if (isAdmin()){ renderAttendance(ev); const es=state.lang==='es';
+    const refresh=async()=>{ db.invites=await sb.from('event_invites').select('*').then(r=>r.data||[]); db.rsvps=await q(sb.from('rsvps').select('*'),'rsvps'); };
+    const drawInv=()=>{ const el=$('#inv-list'); if(!el) return; const inv=db.invites.filter(i=>i.event_id===ev.id).map(i=>store.members().find(m=>m.id===i.member_id)).filter(Boolean); el.innerHTML=inv.length?`<div class="chips">${inv.map(m=>`<span>${esc(m.full_name)} <button data-uninv="${m.id}" style="color:var(--red);margin-left:4px">✕</button></span>`).join('')}</div>`:`<div class="empty">${es?'Nadie invitado todavía.':'No one invited yet.'}</div>`;
+      $$('[data-uninv]').forEach(b=>b.onclick=async()=>{ const {error}=await sb.rpc('uninvite_member',{p_event:ev.id,p_member:b.dataset.uninv,p_whole_series:!!ev.series_id}); if(error){ toast(error.message); return; } await refresh(); drawInv(); renderAttendance(ev); renderAll(); }); };
+    drawInv();
+    const add=$('#inv-add'); if(add) add.onchange=async()=>{ const id=add.value; if(!id) return; const {error}=await sb.rpc('invite_member',{p_event:ev.id,p_member:id,p_whole_series:!!ev.series_id}); if(error){ toast(error.message); return; } await refresh(); add.querySelector(`option[value="${id}"]`)?.remove(); add.value=''; drawInv(); renderAttendance(ev); renderAll(); toast(es?'Invitado y confirmado.':'Invited and RSVP\'d.'); };
+    const tg=$('#inv-toggle'); if(tg) tg.onclick=async()=>{ const on=!ev.invite_only; if(on&&!confirm(es?'¿Hacer esta sesión (y su serie) solo con invitación? Los demás dejarán de verla.':'Make this session (and its series) invite only? Everyone else will stop seeing it.')) return; const {error}=await sb.rpc('set_invite_only',{p_event:ev.id,p_on:on,p_whole_series:!!ev.series_id}); if(error){ toast(error.message); return; } closeSheet(); await loadAll(); renderAll(); toast(on?(es?'Ahora es solo con invitación.':'Now invite only.'):(es?'Abierto a todos.':'Open to everyone.')); }; }
   const del=$('#ev-del'); if (del) del.onclick=async()=>{ if(!confirm(state.lang==='es'?'¿Eliminar este evento?':'Delete this event?')) return; await q(sb.from('events').delete().eq('id',ev.id),'del'); closeSheet(); await loadAll(); renderAll(); };
   const delS=$('#ev-del-series'); if (delS) delS.onclick=async()=>{ if(!confirm(state.lang==='es'?'¿Eliminar este evento y todos los siguientes de la serie?':'Delete this event and all future ones in the series?')) return; await q(sb.from('events').delete().eq('series_id',ev.series_id).gte('starts_at',ev.when),'del'); closeSheet(); await loadAll(); renderAll(); };
 });
@@ -1021,7 +1031,7 @@ function adminForm(kind, m, self){
     <div class="field"><label>${t('f.title')}</label><input id="f-title"></div>
     <div class="row"><div class="field"><label>${t('f.when')}</label><input id="f-when" type="datetime-local"></div><div class="field"><label>${state.lang==='es'?'Duración (min)':'Length (min)'}</label><input id="f-dur" type="number" value="60" min="15" step="15"></div></div>
     <div class="row"><div class="field"><label>${t('f.where')}</label><select id="f-where">${store.rooms().map(r=>`<option>${esc(r.name)}</option>`).join('')}<option>Zoom</option></select></div><div class="field"><label>${t('f.lang')}</label><select id="f-lang"><option>EN</option><option>ES</option><option>EN/ES</option></select></div></div>
-    <div class="field"><label>${state.lang==='es'?'Tipo':'Type'}</label><select id="f-kind"><option>Training</option><option>Mastermind</option><option>Community</option><option>Event</option></select></div>
+    <div class="row"><div class="field"><label>${state.lang==='es'?'Tipo':'Type'}</label><select id="f-kind"><option>Training</option><option>Mastermind</option><option>Community</option><option>Event</option></select></div><div class="field"><label>${state.lang==='es'?'Quién puede verlo':'Who can see it'}</label><select id="f-inv"><option value="">${state.lang==='es'?'Todos los miembros':'All members'}</option><option value="1">${state.lang==='es'?'Solo invitados':'Invite only'}</option></select></div></div>
     <div class="row"><div class="field"><label>${state.lang==='es'?'Se repite':'Repeats'}</label><select id="f-rep"><option value="">${state.lang==='es'?'No se repite':'Does not repeat'}</option><option value="w1">${state.lang==='es'?'Cada semana':'Weekly'}</option><option value="w2">${state.lang==='es'?'Cada 2 semanas':'Every 2 weeks'}</option><option value="m">${state.lang==='es'?'Cada mes (mismo día de la semana)':'Monthly (same weekday)'}</option></select></div><div class="field" id="f-rep-n-wrap" hidden><label>${state.lang==='es'?'Cuántas veces':'How many times'}</label><input id="f-rep-n" type="number" value="8" min="2" max="26"></div></div>
     <p class="note" id="f-rep-hint" hidden></p>
     <div class="field"><label>${t('f.desc')}</label><textarea id="f-desc"></textarea></div>
@@ -1044,7 +1054,7 @@ function adminForm(kind, m, self){
   $('#f-save').onclick=async()=>{
     try{
       if (kind==='event'){ const title=$('#f-title').value.trim(), when=$('#f-when').value; if(!title||!when) return;
-        const base={title, duration_min:+$('#f-dur').value||60, location:$('#f-where').value, lang:$('#f-lang').value, kind:$('#f-kind').value, description:$('#f-desc').value, created_by:db.me.id};
+        const base={title, duration_min:+$('#f-dur').value||60, location:$('#f-where').value, lang:$('#f-lang').value, kind:$('#f-kind').value, description:$('#f-desc').value, created_by:db.me.id, invite_only:!!$('#f-inv').value};
         const rep=$('#f-rep').value;
         if(!rep) await q(sb.from('events').insert({...base, starts_at:new Date(when).toISOString()}),'event');
         else { const sid=crypto.randomUUID(); const ds=seriesDates(new Date(when), rep, +$('#f-rep-n').value||8); await q(sb.from('events').insert(ds.map((d,i)=>({...base, starts_at:d.toISOString(), series_id:sid, series_seq:i+1, series_rule:rep}))),'event'); } }
