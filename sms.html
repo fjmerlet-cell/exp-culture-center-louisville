@@ -1,0 +1,67 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Text Message Updates · eXp Culture Center Louisville</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#0B1220;--surface:#141C30;--line:#1E2A44;--ink:#fff;--muted:#9AA4B8;--coral:#FF5A3C;--blue:#3C87F7;
+--display:'Space Grotesk',system-ui,sans-serif;--body:'Inter',system-ui,sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.65}
+.wrap{width:min(780px,100%);margin:0 auto;padding:0 20px}
+header{border-bottom:1px solid var(--line);padding:22px 0}
+header .wrap{display:flex;align-items:center;gap:12px;font-size:14px;color:var(--muted)}
+header img{height:24px}
+h1{font-family:var(--display);font-size:clamp(30px,5vw,42px);margin:48px 0 6px;letter-spacing:-.02em}
+h2{font-family:var(--display);font-size:21px;margin:38px 0 10px}
+p,li{color:#D5DCE8}p{margin:0 0 14px}ul{margin:0 0 14px;padding-left:20px}
+.upd{color:var(--muted);font-size:14px;margin-bottom:8px}
+.note{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:18px 0}
+a{color:var(--blue)}
+footer{border-top:1px solid var(--line);margin-top:56px;padding:26px 0 46px;color:var(--muted);font-size:14px}
+</style></head><body>
+<header><div class="wrap"><img src="img/exp-logo-white.png" alt="eXp Realty"> <span>| eXp Culture Center Louisville</span></div></header>
+<main class="wrap">
+
+<h1>Text Message Updates</h1>
+<p class="upd">eXp Culture Center Louisville · opt-in for members</p>
+<p>Members of the eXp Culture Center Louisville can choose to get text reminders about trainings, classes, events, schedule changes and office announcements. Opting in is optional and is not a condition of membership.</p>
+
+<h2>Sign up for texts</h2>
+<form id="f" style="background:#141C30;border:1px solid #1E2A44;border-radius:16px;padding:22px">
+  <label style="display:block;font-size:13px;color:#9AA4B8;margin-bottom:6px">Full name</label>
+  <input name="name" required style="width:100%;padding:11px 13px;border-radius:10px;border:1px solid #26345A;background:#0B1220;color:#fff;font:inherit;margin-bottom:14px">
+  <label style="display:block;font-size:13px;color:#9AA4B8;margin-bottom:6px">Email address</label>
+  <input name="email" type="email" required style="width:100%;padding:11px 13px;border-radius:10px;border:1px solid #26345A;background:#0B1220;color:#fff;font:inherit;margin-bottom:14px">
+  <label style="display:block;font-size:13px;color:#9AA4B8;margin-bottom:6px">Mobile phone number</label>
+  <input name="phone" type="tel" required style="width:100%;padding:11px 13px;border-radius:10px;border:1px solid #26345A;background:#0B1220;color:#fff;font:inherit;margin-bottom:16px">
+  <label style="display:flex;gap:11px;align-items:flex-start;font-size:14.5px;line-height:1.55;cursor:pointer">
+    <input type="checkbox" name="consent" required style="width:18px;height:18px;margin-top:3px;flex:none">
+    <span><b>Yes, text me reminders</b> about eXp Culture Center Louisville trainings and events at the mobile number above.</span>
+  </label>
+  <p style="font-size:12.5px;color:#9AA4B8;line-height:1.6;margin:12px 0 16px">By checking this box you agree to receive text messages from eXp Culture Center Louisville. Message frequency varies, typically a few messages per month. <b>Message and data rates may apply.</b> Reply STOP at any time to stop receiving texts, or HELP for help. Consent is not a condition of membership. We do not sell or share your SMS opt-in data or personal information with third parties for marketing purposes. See our <a href="/privacy.html">Privacy Policy</a> and <a href="/terms.html">Terms &amp; Conditions</a>.</p>
+  <button style="width:100%;padding:13px;border:0;border-radius:999px;background:#3C87F7;color:#fff;font:600 15px Inter,sans-serif;cursor:pointer">Sign me up for texts</button>
+  <p id="msg" style="margin:12px 0 0;font-size:14px;color:#1FB98F"></p>
+</form>
+
+<h2>Paper form used at our office</h2>
+<p>Members who join in person fill out the same consent on paper, with the identical checkbox and disclosures:</p>
+<p><a href="img/sms-optin-form.png"><img src="img/sms-optin-form.png" alt="eXp Culture Center Louisville member sign-up and text message consent form" style="width:100%;border-radius:14px;border:1px solid #1E2A44"></a></p>
+
+<h2>How to stop</h2>
+<p>Reply <b>STOP</b> to any message and you will get one confirmation text and nothing further. Reply <b>HELP</b>, or email <a href="mailto:hello@expculturecenterlouisville.com">hello@expculturecenterlouisville.com</a>, for help. You can also turn texts off under Notifications in the member app.</p>
+
+<script>
+const SB='https://pnwkkjqnkvivadlqathg.supabase.co', KEY='sb_publishable_1_w-T-dOjVaiwI6lo-j0YA_hwW7QU8J';
+document.getElementById('f').addEventListener('submit', async (e)=>{
+  e.preventDefault(); const d=new FormData(e.target); const m=document.getElementById('msg');
+  try{
+    const r=await fetch(SB+'/rest/v1/inquiries',{method:'POST',headers:{'Content-Type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY,'Prefer':'return=minimal'},
+      body:JSON.stringify({name:d.get('name'),email:d.get('email'),phone:d.get('phone'),role:'agent',message:'SMS opt-in from expculturecenterlouisville.com/sms.html — consent checkbox checked '+new Date().toISOString()})});
+    m.style.color = r.ok ? '#1FB98F' : '#FF5A3C';
+    m.textContent = r.ok ? "You're on the list. We'll text you about trainings and events. Reply STOP anytime." : "Something went wrong — please email hello@expculturecenterlouisville.com.";
+    if (r.ok) e.target.reset();
+  }catch(err){ m.style.color='#FF5A3C'; m.textContent='Something went wrong — please email hello@expculturecenterlouisville.com.'; }
+});
+</script>
+</main>
+<footer><div class="wrap">eXp Culture Center Louisville · 8923 Stone Green Way, Suite 200, Louisville, KY · <a href="mailto:hello@expculturecenterlouisville.com">hello@expculturecenterlouisville.com</a><br><a href="/">Home</a> · <a href="/privacy.html">Privacy Policy</a> · <a href="/terms.html">Terms &amp; Conditions</a></div></footer>
+</body></html>
